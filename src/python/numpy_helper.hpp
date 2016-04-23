@@ -177,3 +177,13 @@ PyObject *build_populator(const Populator &populator) {
   return it->second->populate(populator);
 }
 
+template <class Container>
+PyObject *build_array(const Container &container) {
+  return (PyObject*)build_array_impl<Container>::build_array(container);
+}
+
+template <class Iterator>
+PyObject *build_array_from_range(const std::pair<Iterator, Iterator> &range) {
+  return (PyObject*)build_array_from_range_impl<Iterator>::build_array(range);
+}
+

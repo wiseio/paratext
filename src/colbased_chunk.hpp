@@ -58,12 +58,12 @@ namespace ParaText {
      * to a string and treated as categorical.
      */
     void process_float(float val)               {
-      if (type == STRING) {
+      if (string_data_.size() > 0) {
         std::string s(std::to_string(val));
         process_categorical(s.begin(), s.end());
       }
       else {
-        uncompressed_floats_.push_back(val);
+        number_data_.push_back(val);
       }
     }
     
@@ -73,12 +73,12 @@ namespace ParaText {
      * to a string and treated as categorical.
      */
     void process_integer(long val)               {
-      if (type == STRING) {
+      if (string_data_.size() > 0) {
         std::string s(std::to_string(val));
         process_categorical(s.begin(), s.end());
       }
       else {
-        uncompressed_floats_.push_back(val);
+        number_data_.push_back(val);
       }
     }
 
@@ -89,7 +89,22 @@ namespace ParaText {
      */
     template <class Iterator>
     void process_categorical(Iterator begin, Iterator end) {
-      uncompressed_strings_.push_back(key);
+      if (number_data_.size() > 0) {
+        if (begin == end) {
+          //std::cout << "{" << std::string(begin, end);
+          number_data_.push_back((long)0);
+        }
+        else {
+          //std::cout << "[" << std::string(begin, end);
+          convert_to_string();
+          std::string key(begin, end);
+          string_data_.push_back((long)get_string_id(key));
+        }
+      }
+      else {
+        std::string key(begin, end);
+        string_data_.push_back((long)get_string_id(key));
+      }
     }
 
     /*
@@ -144,7 +159,7 @@ namespace ParaText {
 
     template <class T, bool Numeric>
     inline typename std::enable_if<std::is_arithmetic<T>::value && !Numeric, T>::type get(size_t i) const {
-      return string_data_[i];
+      return string_data_.get<size_t>(i);
     }
 
     const std::vector<std::string> &get_string_keys() const {
@@ -163,7 +178,7 @@ namespace ParaText {
     }
 
     size_t get_string(size_t idx) {
-      return string_data_[idx];
+      return string_data_.get<size_t>(idx);
     }
     
     size_t get_string_id(const std::string &key) {
@@ -182,7 +197,7 @@ namespace ParaText {
     void convert_to_string() {
       if (number_data_.size() > 0) {
         for (size_t i = 0; i < number_data_.size(); i++) {
-          string_data_.push_back(get_string_id(std::to_string(number_data_.get<float>(i))));
+          string_data_.push_back((long)get_string_id(std::to_string(number_data_.get<float>(i))));
         }
         number_data_.clear();
         number_data_.shrink_to_fit();
@@ -192,14 +207,10 @@ namespace ParaText {
   private:
     std::string column_name_;
     widening_vector_dynamic<uint8_t, int8_t, int16_t, int32_t, int64_t, float> number_data_;
-    std::vector<size_t>                                                        string_data_;
+    widening_vector_dynamic<uint8_t, uint8_t, uint16_t, uint32_t, uint64_t> string_data_;
+    //std::vector<size_t>                                                        string_data_;
     std::unordered_map<std::string, size_t>                                    string_ids_;
     std::vector<std::string>                                                   string_keys_;
-
-    std::vector<float> uncompressed_floats_;
-    std::vector<std::string> uncompressed_strings_;
-    std::vector<std::string> compressed_floats_;
-    std::vector<std::string> compressed_strings_;
   };
 }
 #endif
