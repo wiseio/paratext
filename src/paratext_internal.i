@@ -13,7 +13,11 @@ namespace std {
   %template(vectori) std::vector<int>;
 }
 
+#if defined(SWIGPYTHON)
 %include "python/python.i"
+#else
+%warning "no SWIG typemaps defined for the target language"
+#endif
 
 %include "paratext_internal.hpp"
 %{
