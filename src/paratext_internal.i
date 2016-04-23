@@ -1,5 +1,11 @@
 %module paratext_internal
 
+#if defined(SWIGPYTHON)
+%include "python/python.i"
+#else
+#warning "no SWIG typemaps defined for the target language"
+#endif
+
 %include "std_string.i"
 %include "std_vector.i"
 %include "std_pair.i"
@@ -13,12 +19,7 @@ namespace std {
   %template(vectori) std::vector<int>;
 }
 
-#if defined(SWIGPYTHON)
-%include "python/python.i"
-#else
-%warning "no SWIG typemaps defined for the target language"
-#endif
-
+///4/44/4/4/4
 %include "paratext_internal.hpp"
 %{
 #include "paratext_internal.hpp"

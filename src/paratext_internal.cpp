@@ -7,10 +7,6 @@
 #include <iostream>
 #include <thread>
 
-void paracsv_load(const std::string &filename, const ParaText::ParseParams &params) {
-  std::cout << "paracsv_load" << filename << std::endl;
-}
-
 size_t get_num_cores() {
   return std::thread::hardware_concurrency();
 }

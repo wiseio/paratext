@@ -2,17 +2,8 @@
 import sys, os, os.path, string
 import json
 
-# Turn on debugging with verbose output (very slow)
-debug = False
-
-# Turn on index checking without verbose output (slow)
-debug_index = False
-
-# Turn on debugging without verbose output (slow)
-debug_silent = False
-
 extra_link_args = []
-extra_compile_args = ["-std=c++11", "-I.", "-msse4", "-Wall", "-Wextra"]
+extra_compile_args = ["-std=c++11", "-msse4", "-Wall", "-Wextra"]
 extra_libraries = []
 
 if sys.platform == 'darwin':
