@@ -58,7 +58,7 @@ namespace ParaText {
      * to a string and treated as categorical.
      */
     void process_float(float val)               {
-      if (string_data_.size() > 0) {
+      if (cat_data_.size() > 0) {
         std::string s(std::to_string(val));
         process_categorical(s.begin(), s.end());
       }
@@ -73,7 +73,7 @@ namespace ParaText {
      * to a string and treated as categorical.
      */
     void process_integer(long val)               {
-      if (string_data_.size() > 0) {
+      if (cat_data_.size() > 0) {
         std::string s(std::to_string(val));
         process_categorical(s.begin(), s.end());
       }
@@ -98,12 +98,12 @@ namespace ParaText {
           //std::cout << "[" << std::string(begin, end);
           convert_to_string();
           std::string key(begin, end);
-          string_data_.push_back((long)get_string_id(key));
+          cat_data_.push_back((long)get_string_id(key));
         }
       }
       else {
         std::string key(begin, end);
-        string_data_.push_back((long)get_string_id(key));
+        cat_data_.push_back((long)get_string_id(key));
       }
     }
 
@@ -111,7 +111,7 @@ namespace ParaText {
       Returns the semantics of this column.
      */
     Semantics get_semantics() const {
-      if (string_data_.size() > 0) {
+      if (cat_data_.size() > 0) {
         return Semantics::STRINGISH;
       }
       else {
@@ -123,7 +123,7 @@ namespace ParaText {
       Returns the type index of the data in this column.
      */
     std::type_index get_type_index() const {
-      if (string_data_.size() > 0) {
+      if (cat_data_.size() > 0) {
         return std::type_index(typeid(std::string));
       }
       else {
@@ -132,7 +132,7 @@ namespace ParaText {
     }
 
     std::type_index get_common_type_index(std::type_index &other) const {
-      if (string_data_.size() > 0 || other == std::type_index(typeid(std::string))) {
+      if (cat_data_.size() > 0 || other == std::type_index(typeid(std::string))) {
         return std::type_index(typeid(std::string));
       }
       else {
@@ -142,7 +142,7 @@ namespace ParaText {
 
     template <class T>
     size_t insert_numeric(T *oit) {
-      if (string_data_.size() > 0) {
+      if (cat_data_.size() > 0) {
         throw std::logic_error("expected numeric data");
       }
       size_t to_copy = number_data_.size();
@@ -159,33 +159,33 @@ namespace ParaText {
 
     template <class T, bool Numeric>
     inline typename std::enable_if<std::is_arithmetic<T>::value && !Numeric, T>::type get(size_t i) const {
-      return string_data_.get<size_t>(i);
+      return cat_data_.get<size_t>(i);
     }
 
-    const std::vector<std::string> &get_string_keys() const {
-      return string_keys_;
+    const std::vector<std::string> &get_cat_keys() const {
+      return cat_keys_;
     }
     
     size_t size() const {
-      return (string_data_.size() > 0) ? string_data_.size() : number_data_.size();
+      return (cat_data_.size() > 0) ? cat_data_.size() : number_data_.size();
     }
     
     void clear() {
       number_data_.clear();
-      string_data_.clear();
-      string_ids_.clear();
-      string_keys_.clear();
+      cat_data_.clear();
+      cat_ids_.clear();
+      cat_keys_.clear();
     }
 
     size_t get_string(size_t idx) {
-      return string_data_.get<size_t>(idx);
+      return cat_data_.get<size_t>(idx);
     }
     
     size_t get_string_id(const std::string &key) {
-      auto it = string_ids_.find(key);
-      if (it == string_ids_.end()) {
-        std::tie(it, std::ignore) = string_ids_.insert(std::make_pair(key, string_ids_.size()));
-        string_keys_.push_back(key);
+      auto it = cat_ids_.find(key);
+      if (it == cat_ids_.end()) {
+        std::tie(it, std::ignore) = cat_ids_.insert(std::make_pair(key, cat_ids_.size()));
+        cat_keys_.push_back(key);
       }
       return it->second;
     }
@@ -197,20 +197,23 @@ namespace ParaText {
     void convert_to_string() {
       if (number_data_.size() > 0) {
         for (size_t i = 0; i < number_data_.size(); i++) {
-          string_data_.push_back((long)get_string_id(std::to_string(number_data_.get<float>(i))));
+          cat_data_.push_back((long)get_string_id(std::to_string(number_data_.get<float>(i))));
         }
         number_data_.clear();
         number_data_.shrink_to_fit();
       }
     }
 
+    void add_cat_data(const std::string &data) {
+      cat_data_.push_back((long)get_string_id(data));
+    }
+
   private:
     std::string column_name_;
     widening_vector_dynamic<uint8_t, int8_t, int16_t, int32_t, int64_t, float> number_data_;
-    widening_vector_dynamic<uint8_t, uint8_t, uint16_t, uint32_t, uint64_t> string_data_;
-    //std::vector<size_t>                                                        string_data_;
-    std::unordered_map<std::string, size_t>                                    string_ids_;
-    std::vector<std::string>                                                   string_keys_;
+    widening_vector_dynamic<uint8_t, uint8_t, uint16_t, uint32_t, uint64_t>    cat_data_;
+    std::unordered_map<std::string, size_t>                                    cat_ids_;
+    std::vector<std::string>                                                   cat_keys_;
   };
 }
 #endif

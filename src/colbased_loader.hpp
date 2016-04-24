@@ -153,7 +153,6 @@ namespace ParaText {
       Returns the categorical levels.
      */
     const std::vector<std::string> &get_levels(size_t column_index) const {
-      std::cout << level_names_[column_index].size();
       return level_names_[column_index];
     }
 
@@ -279,7 +278,7 @@ namespace ParaText {
       for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
         const auto &clist = column_chunks_[worker_id][column_index];
         clist->convert_to_string();
-        auto &keys = clist->get_string_keys();
+        auto &keys = clist->get_cat_keys();
         const size_t sz = clist->size();
         for (size_t i = 0; i < sz; i++) {
           const size_t other_level_index = clist->get<size_t, false>(i);

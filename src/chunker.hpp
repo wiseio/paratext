@@ -21,8 +21,8 @@
   Coder: Damian Eads.
  */
 
-#ifndef PARATEXT_LINE_CHUNKER_HPP
-#define PARATEXT_LINE_CHUNKER_HPP
+#ifndef PARATEXT_LINE_CHUNKER2_HPP
+#define PARATEXT_LINE_CHUNKER2_HPP
 
 #include <iostream>
 #include <fstream>
@@ -72,7 +72,7 @@ namespace ParaText {
       }
       length_ = fs.st_size;
       in_.open(filename.c_str());
-      compute_offsets(allow_quoted_newlines);      
+      compute_offsets(allow_quoted_newlines);
     }
     
     /*
@@ -170,60 +170,60 @@ namespace ParaText {
       }
       size_t quotes_so_far = 0;
       size_t cur_wid = 0;
+      size_t next_wid = 1;
+      quotes_so_far += workers[cur_wid]->get_num_quotes();
       while (cur_wid < workers.size()) {
         //std::cerr << "," << cur_wid;
-        const size_t proposed_quotes = quotes_so_far + workers[cur_wid]->get_num_quotes();
-        if (proposed_quotes % 2 == 0) {
-          if (!workers[cur_wid]->ends_with_newline()) {
-            size_t other_wid = cur_wid + 1;
-            for (; other_wid < workers.size(); other_wid++) {
-              if (workers[other_wid]->get_first_unquoted_newline() >= 0) {
-              workers[cur_wid]->steal_first_unquoted_newline(*workers[other_wid]);
-              break;
-              }
-              else {
-                workers[other_wid]->clear();
-              }
-            }
-            cur_wid = other_wid;
-          quotes_so_far += workers[cur_wid]->get_num_quotes();
-        }
-        else {
+        if (end_of_chunk_[cur_wid] == start_of_chunk_[cur_wid]) {
+          start_of_chunk_[cur_wid] = 0;
+          end_of_chunk_[cur_wid] = 0;
           cur_wid++;
+          next_wid = cur_wid + 1;
+          continue;
         }
-      }
-      else { /* There are an odd number of quotes. */
-        size_t other_wid = cur_wid + 1;
-        for (; other_wid < workers.size(); other_wid++) {
-          if (workers[other_wid]->get_first_quoted_newline() >= 0) {
-            workers[cur_wid]->steal_first_quoted_newline(*workers[other_wid]);
-            break;
+        if (quotes_so_far % 2 == 0) {
+          if (next_wid < workers.size()) {
+            quotes_so_far += workers[next_wid]->get_num_quotes();
+            if (workers[next_wid]->get_first_unquoted_newline() >= 0) {
+              end_of_chunk_[cur_wid] = workers[next_wid]->get_first_unquoted_newline();
+              start_of_chunk_[next_wid] = std::min(end_of_chunk_[next_wid], end_of_chunk_[cur_wid] + 1);
+              cur_wid = next_wid;
+            }
+            else {
+              end_of_chunk_[cur_wid] = end_of_chunk_[next_wid];
+              start_of_chunk_[next_wid] = 0;
+              end_of_chunk_[next_wid] = 0;
+            }
+            next_wid++;
           }
           else {
-            workers[other_wid]->clear();
+            end_of_chunk_[cur_wid] = length_;
+            break;
           }
         }
-        quotes_so_far += workers[cur_wid]->get_num_quotes();
-        cur_wid = other_wid;
+        else {
+          if (next_wid < workers.size()) {
+            quotes_so_far += workers[next_wid]->get_num_quotes();
+            if (workers[next_wid]->get_first_quoted_newline() >= 0) {
+              end_of_chunk_[cur_wid] = workers[next_wid]->get_first_quoted_newline();
+              start_of_chunk_[next_wid] = std::min(end_of_chunk_[next_wid], end_of_chunk_[cur_wid] + 1);
+              cur_wid = next_wid;
+            }
+            else {
+              end_of_chunk_[cur_wid] = end_of_chunk_[next_wid];
+              start_of_chunk_[next_wid] = 0;
+              end_of_chunk_[next_wid] = 0;
+            }
+            next_wid++;
+          }
+          else {
+            std::ostringstream ostr;
+            ostr << "The file ends with an open quote (" << quotes_so_far << ")";
+            throw ostr.str();
+          }
+        }
       }
     }
-    start_of_chunk_.clear();
-    end_of_chunk_.clear();
-    /*
-      At this stage, we may end up with fewer chunks.
-     */
-    for (size_t wid = 0; wid < workers.size(); wid++) {
-      size_t start = workers[wid]->get_start();
-      size_t end = workers[wid]->get_end();
-      if (start != end) {
-        start_of_chunk_.push_back(start);
-        end_of_chunk_.push_back(end);
-#ifdef PARALOAD_DEBUG
-        std::cout << "start: " << start << " end: " << end << std::endl;
-#endif
-      }
-    }
-  }
     
   private:
     std::ifstream in_;

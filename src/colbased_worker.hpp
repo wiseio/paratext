@@ -196,12 +196,12 @@ public:
           exp_possible = token_[i] == 'E' || token_[i] == 'e';
           i++;
           if (exp_possible && i < token_.size()) {
-            std::cout << "A";
+            //std::cout << "A";
             if (token_[i] == '+' || token_[i] == '-') {
-              std::cout << "B";
+              //std::cout << "B";
               i++;
               if (i < token_.size()) {
-                std::cout << "C";
+                //std::cout << "C";
                 exp_possible = isdigit(token_[i]);
                 i++;
                 while (i < token_.size() && exp_possible) {
@@ -214,12 +214,12 @@ public:
               }
             }
             else if (isdigit(token_[i])) {
-              std::cout << "D";
+              //std::cout << "D";
               while (i < token_.size() && exp_possible) {
                 exp_possible = isdigit(token_[i]);
                 i++;
               }
-              std::cout << "E" << exp_possible << (token_[i-1]);
+              //std::cout << "E" << exp_possible << (token_[i-1]);
             }
             else {
               exp_possible = false;
