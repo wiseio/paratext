@@ -144,6 +144,16 @@ public:
     for (; i < token_.size() && isspace(token_[i]); i++) {}
     if (i < token_.size()) {
       if (token_[i] == '-') { i++; }
+      else if (token_[i] == '?' && token_.size() - i == 1) {
+        handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
+        goto finish_numeric_token;
+      }
+      else if ((token_[i] == 'n' || token_[i] == 'N') && token_.size() - i == 3) {
+        if ((token_[i+1] == 'a' || token_[i+1] == 'A') && (token_[i+2] == 'n' || token_[i+2] == 'N')) {
+          handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
+          goto finish_numeric_token;
+        }
+      }
     }
     for (; i < token_.size() && isdigit(token_[i]); i++) {}
     if (i < token_.size()) {
@@ -152,6 +162,7 @@ public:
     else {
       handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
     }
+  finish_numeric_token:
     column_index_++;
     token_.clear();
   }
@@ -175,6 +186,16 @@ public:
         if (token_[i] == '-') {
           i++;
         }
+        else if (token_[i] == '?' && token_.size() - i == 1) {
+          handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
+          goto finish_token;
+        }
+        else if ((token_[i] == 'n' || token_[i] == 'N') && token_.size() - i == 3) {
+          if ((token_[i+1] == 'a' || token_[i+1] == 'A') && (token_[i+2] == 'n' || token_[i+2] == 'N')) {
+            handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
+          }
+          goto finish_token;
+        }
         bool integer_possible = std::isdigit(token_[i]);
         i++;
         float_possible = integer_possible, exp_possible = integer_possible;
@@ -182,6 +203,10 @@ public:
           integer_possible = isdigit(token_[i]);
           i++;
         }
+      }
+      else {
+        handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
+        goto finish_token;
       }
       if (i < token_.size()) {
         integer_possible = false;
@@ -240,6 +265,7 @@ public:
         handlers_[column_index_]->process_categorical(token_.begin(), token_.end());
       }
     }
+  finish_token:
     column_index_++;
     token_.clear();
   }

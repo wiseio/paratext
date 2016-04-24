@@ -20,6 +20,9 @@
   Coder: Damian Eads.
  */
 
+#ifndef WISEIO_NUMPY_HELPER_HPP
+#define WISEIO_NUMPY_HELPER_HPP
+
 #include <unordered_map>
 #include <typeinfo>
 #include <typeindex>
@@ -187,3 +190,4 @@ PyObject *build_array_from_range(const std::pair<Iterator, Iterator> &range) {
   return (PyObject*)build_array_from_range_impl<Iterator>::build_array(range);
 }
 
+#endif
