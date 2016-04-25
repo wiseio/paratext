@@ -51,10 +51,17 @@ namespace ParaText {
     void open(const std::string &filename, bool no_header) {
       struct stat fs;
       if (stat(filename.c_str(), &fs) == -1) {
-        throw std::logic_error("cannot stat file");
+        std::ostringstream ostr;
+        ostr << "cannot open file '" << filename << "'";
+        throw std::logic_error(ostr.str());
       }
       length_ = fs.st_size;
       in_.open(filename);
+      if (!in_) {
+        std::ostringstream ostr;
+        ostr << "cannot open file '" << filename << "'";
+        throw std::logic_error(ostr.str());
+      }
       parse_header(no_header);
     }
 

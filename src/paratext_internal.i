@@ -19,7 +19,7 @@ namespace std {
   %template(vectori) std::vector<int>;
 }
 
-///4/44/4/4/4
+/////////
 %include "paratext_internal.hpp"
 %{
 #include "paratext_internal.hpp"

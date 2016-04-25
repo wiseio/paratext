@@ -1,9 +1,35 @@
+/*
+
+    ParaText: parallel text reading
+    Copyright (C) 2016. wise.io, Inc.
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+/*
+  Coder: Damian Eads.
+ */
+
 #ifndef WISEIO_PARSE_WORKER_COL_BASED_HPP
 #define WISEIO_PARSE_WORKER_COL_BASED_HPP
 
-#include <fstream>
 #include "strings.hpp"
 #include "widening_vector.hpp"
+
+#include <fstream>
+#include <exception>
+#include <stdexcept>
 
 namespace ParaText {
 
@@ -20,12 +46,21 @@ public:
              size_t data_begin,
              size_t file_end,
              const ParaText::ParseParams &params) {
-    if (params.number_only) {
-      parse_impl<true>(filename, begin, end, data_begin, file_end, params);
+    try {
+      if (params.number_only) {
+        parse_impl<true>(filename, begin, end, data_begin, file_end, params);
+      }
+      else {
+        parse_impl<false>(filename, begin, end, data_begin, file_end, params);
+      }
     }
-    else {
-      parse_impl<false>(filename, begin, end, data_begin, file_end, params);
+    catch (...) {
+      thread_exception_ = std::current_exception();
     }
+  }
+
+  std::exception_ptr get_exception() {
+    return thread_exception_;
   }
 
   template <bool NumberOnly>
@@ -43,16 +78,14 @@ public:
     quote_started_ = '\0';
     escape_started_ = false;
     size_t current = begin;
-    //size_t block_size = 65536;
     const size_t block_size = params.block_size;
-    //size_t block_size = 4096;
     char buf[block_size];
     in.seekg(current, std::ios_base::beg);
     definitely_string_ = false;
 #ifdef PARALOAD_DEBUG
     size_t round = 0;
 #endif
-    while (current < end) {
+    while (current <= end) {
       if (current % block_size == 0) { /* The block is aligned. */
         in.read(buf, std::min(end - current + 1, block_size));
       }
@@ -73,10 +106,10 @@ public:
         size_t i = 0;
         for (; i < nread; i++) {
           if (buf[i] == ',') {
-            process_token();
+            process_token_number_only();
           }
           else if (buf[i] == '\n') {
-            process_token();
+            process_token_number_only();
             process_newline();
           } else {
             token_.push_back(buf[i]);
@@ -119,7 +152,14 @@ public:
       current += nread;
     }
     if (column_index_ + 1 == handlers_.size()) {
-      process_token();
+      if (NumberOnly) {
+        process_token_number_only();
+      } else {
+        process_token();
+      }
+      process_newline();
+    }
+    else if (column_index_ == handlers_.size()) {
       process_newline();
     }
 #ifdef PARALOAD_DEBUG
@@ -129,6 +169,11 @@ public:
   }
 
   void process_newline() {
+    if (column_index_ != handlers_.size()) {
+      std::ostringstream ostr;
+      ostr << "too few columns on (unquoted) line: " << lines_parsed_;
+      throw std::logic_error(ostr.str());
+    }
     column_index_ = 0;
     lines_parsed_++;
   }
@@ -141,28 +186,30 @@ public:
       throw std::logic_error(estr);
     }
     size_t i = 0;
+    bool handled = false;
     for (; i < token_.size() && isspace(token_[i]); i++) {}
     if (i < token_.size()) {
       if (token_[i] == '-') { i++; }
       else if (token_[i] == '?' && token_.size() - i == 1) {
         handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
-        goto finish_numeric_token;
+        handled = true;
       }
       else if ((token_[i] == 'n' || token_[i] == 'N') && token_.size() - i == 3) {
         if ((token_[i+1] == 'a' || token_[i+1] == 'A') && (token_[i+2] == 'n' || token_[i+2] == 'N')) {
           handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
-          goto finish_numeric_token;
+          handled = true;
         }
       }
     }
-    for (; i < token_.size() && isdigit(token_[i]); i++) {}
-    if (i < token_.size()) {
-      handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
+    if (!handled) {
+      for (; i < token_.size() && isdigit(token_[i]); i++) {}
+      if (i < token_.size() && (token_[i] == '.' || token_[i] == 'E' || token_[i] == 'e')) {
+        handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
+      }
+      else {
+        handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
+      }
     }
-    else {
-      handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
-    }
-  finish_numeric_token:
     column_index_++;
     token_.clear();
   }
@@ -180,7 +227,7 @@ public:
     }
     else {
       size_t i = 0;
-      bool integer_possible = false, float_possible = false, exp_possible = false;
+      bool integer_possible = false, float_possible = false, exp_possible = false, handled = false;
       for (; i < token_.size() && isspace(token_[i]); i++) {}
       if (i < token_.size()) {
         if (token_[i] == '-') {
@@ -188,84 +235,86 @@ public:
         }
         else if (token_[i] == '?' && token_.size() - i == 1) {
           handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
-          goto finish_token;
+          handled = true;
         }
         else if ((token_[i] == 'n' || token_[i] == 'N') && token_.size() - i == 3) {
           if ((token_[i+1] == 'a' || token_[i+1] == 'A') && (token_[i+2] == 'n' || token_[i+2] == 'N')) {
             handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
+            handled = true;
           }
-          goto finish_token;
         }
-        bool integer_possible = std::isdigit(token_[i]);
+      }
+      if (i < token_.size() && !handled) {
+        integer_possible = std::isdigit(token_[i]);
         i++;
         float_possible = integer_possible, exp_possible = integer_possible;
         while (i < token_.size() && integer_possible) {
           integer_possible = isdigit(token_[i]);
           i++;
         }
-      }
-      else {
-        handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
-        goto finish_token;
-      }
-      if (i < token_.size()) {
-        integer_possible = false;
-        float_possible = token_[i] == '.';
-        i++;
-        while (i < token_.size() && float_possible) {
-          float_possible = isdigit(token_[i]);
+        if (i < token_.size()) {
+          integer_possible = false;
+          float_possible = token_[i] == '.';
           i++;
-        }
-        if (float_possible && i < token_.size()) {
-          float_possible = false;
-          exp_possible = token_[i] == 'E' || token_[i] == 'e';
-          i++;
-          if (exp_possible && i < token_.size()) {
-            //std::cout << "A";
-            if (token_[i] == '+' || token_[i] == '-') {
-              //std::cout << "B";
-              i++;
-              if (i < token_.size()) {
-                //std::cout << "C";
-                exp_possible = isdigit(token_[i]);
+          while (i < token_.size() && float_possible) {
+            float_possible = isdigit(token_[i]);
+            i++;
+          }
+          if (float_possible && i < token_.size()) {
+            float_possible = false;
+            exp_possible = token_[i] == 'E' || token_[i] == 'e';
+            i++;
+            if (exp_possible && i < token_.size()) {
+              //std::cout << "A";
+              if (token_[i] == '+' || token_[i] == '-') {
+                //std::cout << "B";
                 i++;
+                if (i < token_.size()) {
+                  //std::cout << "C";
+                  exp_possible = isdigit(token_[i]);
+                  i++;
+                  while (i < token_.size() && exp_possible) {
+                    exp_possible = isdigit(token_[i]);
+                    i++;
+                  }
+                }
+                else {
+                  exp_possible = false;
+                }
+              }
+              else if (isdigit(token_[i])) {
+                //std::cout << "D";
                 while (i < token_.size() && exp_possible) {
                   exp_possible = isdigit(token_[i]);
                   i++;
                 }
+                //std::cout << "E" << exp_possible << (token_[i-1]);
               }
               else {
                 exp_possible = false;
               }
             }
-            else if (isdigit(token_[i])) {
-              //std::cout << "D";
-              while (i < token_.size() && exp_possible) {
-                exp_possible = isdigit(token_[i]);
-                i++;
-              }
-              //std::cout << "E" << exp_possible << (token_[i-1]);
-            }
             else {
               exp_possible = false;
             }
           }
-          else {
-            exp_possible = false;
-          }
+        }
+        if (integer_possible) {
+          //std::string s(token_.begin(), token_.end());
+          //std::cout << s << ":" << fast_atoi<long>(token_.begin(), token_.end()) << std::endl;
+          handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
+        }
+        else if (float_possible || exp_possible) {
+          handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
+        }
+        else {
+          handlers_[column_index_]->process_categorical(token_.begin(), token_.end());
         }
       }
-      if (integer_possible) {
-        handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
-      }
-      else if (float_possible || exp_possible) {
-        handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
-      }
       else {
-        handlers_[column_index_]->process_categorical(token_.begin(), token_.end());
+        handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
       }
     }
-  finish_token:
     column_index_++;
     token_.clear();
   }
@@ -278,6 +327,7 @@ private:
   char                                         quote_started_;
   size_t                                       column_index_;
   bool                                         escape_started_;
+  std::exception_ptr                           thread_exception_;
 };
 }
 

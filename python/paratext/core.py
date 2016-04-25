@@ -16,24 +16,27 @@ def _docstring_parameter(*sub):
      return dec
 
 _csv_load_params_doc = """
-     filename : string
-         The name of the CSV file to load.
+    filename : string
+        The name of the CSV file to load.
 
-     num_threads : int
-         The number of parser threads to spawn. (default=num_cores)
+    num_threads : int
+        The number of parser threads to spawn. (default=num_cores)
 
-     allow_quoted_newlines : bool
-         Whether to allow newlines to be quoted. (default=False)
+    allow_quoted_newlines : bool
+        Whether to allow newlines to be quoted. (default=False)
 
-     block_size : int
-         The number of bytes to read at a time in each worker. (default=32768)
+    block_size : int
+        The number of bytes to read at a time in each worker. (default=32768)
 
-     number_only : bool
-         Whether it can be safely assumed the columns only contain numbers. (default=False)
+    number_only : bool
+        Whether it can be safely assumed the columns only contain numbers. (default=False)
+
+    no_header : bool
+        Do not auto-detect the presence of a header. Assume the first line is data. (default=False)
 """
 
 @_docstring_parameter(_csv_load_params_doc)
-def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False):
+def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False):
     """
     Loads a CSV file, producing a generator object that can be used to
     generate a pandas DataFrame, Wise DataSet, a dictionary, or a custom
@@ -72,6 +75,7 @@ def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_siz
     else:
         params.num_threads = 4
     params.number_only = number_only
+    params.no_header = no_header
     loader.load(filename, params)
     data = []
     #all_levels = {}

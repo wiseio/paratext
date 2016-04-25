@@ -40,6 +40,20 @@ public:
   virtual ~QuoteNewlineAdjustmentWorker() {}
 
   void parse(const std::string &filename) {
+    try {
+      parse_impl(filename);
+    }
+    catch (...) {
+      thread_exception_ = std::current_exception();
+    }
+  }
+
+  std::exception_ptr get_exception() {
+    return thread_exception_;
+  }
+
+  void parse_impl(const std::string &filename) {
+
     std::ifstream in;
     in.open(filename.c_str());
     const size_t block_size = 32768;
@@ -47,7 +61,7 @@ public:
     in.seekg(chunk_start_, std::ios_base::beg);
     size_t current = chunk_start_;
     bool in_quote = false;
-    while (current < chunk_end_) {
+    while (current <= chunk_end_) {
       in.read(buf, std::min(chunk_end_ - current + 1, block_size));
       size_t nread = in.gcount();
       if (nread == 0) {
@@ -209,6 +223,7 @@ private:
   size_t num_quotes_before_first_unquoted_newline_;
   size_t num_quotes_before_first_quoted_newline_;
   size_t file_size_;
+  std::exception_ptr thread_exception_;
 };
 }
 #endif

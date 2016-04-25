@@ -156,6 +156,9 @@ namespace ParaText {
       return level_names_[column_index];
     }
 
+    /*
+      Returns the number of elements.
+     */
     size_t size() const {
       return size_.back();
     }
@@ -329,6 +332,7 @@ namespace ParaText {
       std::vector<std::thread> threads;
       std::vector<std::shared_ptr<ColBasedParseWorker<ColBasedChunk> > > workers;
       //std::cerr << "number of threads: " << num_threads_ << std::endl;
+      std::exception_ptr thread_exception;
       size_t num_threads = chunker_.num_chunks();
       column_chunks_.clear();
       for (size_t worker_id = 0; worker_id < num_threads; worker_id++) {
@@ -364,6 +368,10 @@ namespace ParaText {
       }
       for (size_t i = 0; i < threads.size(); i++) {
         threads[i].join();
+      }
+      // We're now outside the parallel region.
+      if (thread_exception) {
+        std::rethrow_exception(thread_exception);
       }
     }
 

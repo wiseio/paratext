@@ -29,13 +29,13 @@
 %}
 
 %init %{
-  import_array();
+  _import_array();
 %}
 
 %exception {
     try {
         $action
-    } catch (std::string &e) {
+    } catch (const std::string &e) {
       std::string s = e;
       SWIG_exception(SWIG_RuntimeError, s.c_str());
       SWIG_fail;
