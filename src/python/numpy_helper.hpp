@@ -27,6 +27,7 @@
 #include <typeinfo>
 #include <typeindex>
 #include <memory>
+#include <iostream>
 
 template <class T>
 struct numpy_type {};
@@ -53,9 +54,16 @@ struct build_array_impl<Container, typename std::enable_if<std::is_arithmetic<ty
   static PyObject *build_array(const Container &container) {
     npy_intp fdims[] = {(npy_intp)container.size()};
     PyObject *obj = (PyObject*)PyArray_SimpleNew(1, fdims, numpy_type<value_type>::id);
-    value_type *data = (value_type*)PyArray_DATA((PyArrayObject*)obj);
-    for (size_t i = 0; i < container.size(); i++) {
-      data[i] = container[i];
+    try {
+      value_type *data = (value_type*)PyArray_DATA((PyArrayObject*)obj);
+      for (size_t i = 0; i < container.size(); i++) {
+        data[i] = container[i];
+      }
+    }
+    catch (...) {
+      Py_XDECREF(obj);
+      obj = NULL;
+      std::rethrow_exception(std::current_exception());
     }
     return obj;
   }
@@ -68,13 +76,27 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
   typedef typename Container::value_type value_type;
 
   static PyObject *build_array(const Container &container) {
-    npy_intp fdims[] = {(npy_intp)container.size()};
+    size_t sz = (size_t)container.size();
+    npy_intp fdims[] = {(npy_intp)sz};
     PyObject *obj = (PyObject*)PyArray_SimpleNew(1, fdims, NPY_OBJECT);
-    for (size_t i = 0; i < container.size(); i++) {
-      PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)obj, i);
-      Py_XDECREF(*ref);
-      *ref = PyString_FromStringAndSize(container[i].c_str(), container[i].size());
-      Py_XINCREF(*ref);
+    try { 
+      for (size_t i = 0; i < container.size(); i++) {
+        PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)obj, i);
+        PyObject *newobj = PyString_FromStringAndSize(container[i].c_str(), container[i].size());
+        Py_XDECREF(*ref);
+        *ref = newobj;
+        Py_XINCREF(*ref);
+      }
+    }
+    catch (...) {
+      for (size_t i = 0; i < sz; i++) {
+        PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)obj, i);
+        Py_XDECREF(*ref);
+        *ref = Py_None;
+        Py_XINCREF(*ref);
+      }
+      Py_XDECREF(obj);
+      std::rethrow_exception(std::current_exception());      
     }
     return obj;
   }
@@ -107,14 +129,28 @@ struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_sam
   typedef typename Iterator::value_type value_type;
 
   static PyObject *build_array(const std::pair<Iterator, Iterator> &range) {
-    npy_intp fdims[] = {(npy_intp)std::distance(range.first, range.second)};
+    size_t sz = (npy_intp)std::distance(range.first, range.second);
+    npy_intp fdims[] = {(npy_intp)sz};
     PyObject *obj = (PyObject*)PyArray_SimpleNew(1, fdims, NPY_OBJECT);
-    size_t i = 0;
-    for (Iterator it = range.first; it != range.second; it++, i++) {
-      PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)obj, i);
-      Py_XDECREF(*ref);
-      *ref = PyString_FromStringAndSize((*it).c_str(), (*it).size());
-      Py_XINCREF(*ref);
+    try {
+      size_t i = 0;
+      for (Iterator it = range.first; it != range.second; it++, i++) {
+        PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)obj, i);
+        PyObject *newobj = PyString_FromStringAndSize((*it).c_str(), (*it).size());
+        Py_XDECREF(*ref);
+        *ref = newobj;
+        Py_XINCREF(*ref);
+      }
+    }
+    catch (...) {
+      size_t i = 0;
+      for (i = 0; i < sz; i++) {
+        PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)obj, i);
+        Py_XDECREF(*ref);
+        *ref = Py_None;
+        Py_XINCREF(*ref);
+      }
+      std::rethrow_exception(std::current_exception());
     }
     return obj;
   }
@@ -137,9 +173,16 @@ struct derived_insert_populator_impl : public base_insert_populator_impl<Populat
 
   virtual PyObject *populate(const Populator &populator) {
     npy_intp fdims[] = {(npy_intp)populator.size()};
-    PyObject *obj = (PyObject*)PyArray_SimpleNew(1, fdims, numpy_type<value_type>::id);
-    value_type *data = (value_type*)PyArray_DATA((PyArrayObject*)obj);
-    populator.insert(data);
+    PyObject *obj = NULL;
+    try {
+      obj = (PyObject*)PyArray_SimpleNew(1, fdims, numpy_type<value_type>::id);
+      value_type *data = (value_type*)PyArray_DATA((PyArrayObject*)obj);
+      populator.insert(data);
+    }
+    catch (...) {
+      std::cerr << "^^^B";
+      std::rethrow_exception(std::current_exception());
+    }
     return obj;
   }
 };

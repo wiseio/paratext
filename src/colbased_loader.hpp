@@ -159,8 +159,8 @@ namespace ParaText {
     /*
       Returns the number of elements.
      */
-    size_t size() const {
-      return size_.back();
+    size_t size(size_t column_index) const {
+      return size_[column_index];
     }
 
     /*
@@ -466,7 +466,7 @@ namespace ParaText {
   }
 
   size_t ColBasedPopulator::size() const {
-    return loader_->size();
+    return loader_->size(column_index_);
   }
 
 }
