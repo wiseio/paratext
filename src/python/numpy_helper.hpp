@@ -175,7 +175,7 @@ PyObject *build_populator(const Populator &populator) {
   }
   auto it = populators.find(populator.get_type_index());
   if (it == populators.end()) {
-    throw std::string("cannot process type");
+    throw std::logic_error(std::string("cannot process type"));
   }
   return it->second->populate(populator);
 }

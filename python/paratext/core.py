@@ -33,10 +33,18 @@ _csv_load_params_doc = """
 
     no_header : bool
         Do not auto-detect the presence of a header. Assume the first line is data. (default=False)
+
+    max_level_name_length : int
+        The maximum length of a categorical level name. If a text field has a length that
+        exceeds this length, the entire column is treated as text.
+
+    max_levels : int
+        The maximum number of levels of a categorical column. If a column has more than
+        ``max_levels`` unique strings, it is treated as text.
 """
 
 @_docstring_parameter(_csv_load_params_doc)
-def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False):
+def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None):
     """
     Loads a CSV file, producing a generator object that can be used to
     generate a pandas DataFrame, Wise DataSet, a dictionary, or a custom
@@ -73,9 +81,13 @@ def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_siz
     if num_threads > 0:
         params.num_threads = num_threads
     else:
-        params.num_threads = 4
+        params.num_threads = int(max(get_num_cores()*1.5, 4))
     params.number_only = number_only
     params.no_header = no_header
+    if max_levels is not None:
+        params.max_levels = max_levels;
+    if max_level_name_length is not None:
+        params.max_level_name_length = max_level_name_length
     loader.load(filename, params)
     data = []
     #all_levels = {}

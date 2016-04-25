@@ -202,7 +202,7 @@ namespace ParaText {
 
     ColBasedPopulator get_column(size_t column_index) const {
       if (!all_numeric_[column_index]) {
-        cache_categorical_column(column_index);
+        cache_cat_or_text_column(column_index);
       }
       ColBasedPopulator populator(this, column_index);
       return populator;
@@ -210,6 +210,11 @@ namespace ParaText {
 
     template <class OutputIterator, class T=typename std::iterator_traits<OutputIterator>::value_type>
     void copy_column(size_t column_index, OutputIterator it) const {
+      copy_column_impl<OutputIterator, T>(column_index, it);
+    }
+
+    template <class OutputIterator, class T>
+    typename std::enable_if<std::is_arithmetic<T>::value, void >::type copy_column_impl(size_t column_index, OutputIterator it) const {
       if (all_numeric_[column_index]) {
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
           const auto &clist = column_chunks_[worker_id][column_index];
@@ -219,15 +224,44 @@ namespace ParaText {
             it++;
           }
         }
-      } else {
+      } else if (any_text_[column_index]) {
+        std::ostringstream ostr;
+        ostr << "numeric output iterator expected for column " << column_index;
+        throw std::logic_error(ostr.str());
+      }
+      else {
         if (cached_categorical_column_index_ != column_index) {
-          cache_categorical_column(column_index);
+          cache_cat_or_text_column(column_index);
         }
         const size_t sz(cat_buffer_.size());
         for (size_t i = 0; i < sz; i++) {
           *it = cat_buffer_[i];
           it++;
         }
+      }
+    }
+
+    template <class OutputIterator, class T>
+    typename std::enable_if<!std::is_arithmetic<T>::value, void>::type copy_column_impl(size_t column_index, OutputIterator it) const {
+      if (all_numeric_[column_index]) {
+        std::ostringstream ostr;
+        ostr << "string output iterator expected for column " << column_index;
+        throw std::logic_error(ostr.str());
+      } else if (any_text_[column_index]) {
+        std::cout << "^^^" << column_index << std::endl;
+        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+          const auto &clist = column_chunks_[worker_id][column_index];
+          const size_t sz = clist->size();
+          for (size_t i = 0; i < sz; i++) {
+            *it = clist->get_text(i);
+            it++;
+          }
+        }
+      }
+      else {
+        std::ostringstream ostr;
+        ostr << "string output iterator expected for column " << column_index;
+        throw std::logic_error(ostr.str());
       }
     }
 
@@ -253,21 +287,26 @@ namespace ParaText {
 
     std::type_index get_type_index(size_t column_index) const {
       if (!all_numeric_[column_index]) {
-        cache_categorical_column(column_index);
+        cache_cat_or_text_column(column_index);
       }
       if (cached_categorical_column_index_ == column_index) {
-        const size_t num_levels = level_names_[column_index].size();
-        if (num_levels <= std::numeric_limits<uint8_t>::max()) {
-          return std::type_index(typeid(uint8_t));
-        }
-        else if (num_levels <= std::numeric_limits<uint16_t>::max()) {
-          return std::type_index(typeid(uint16_t));
-        }
-        else if (num_levels <= std::numeric_limits<uint32_t>::max()) {
-          return std::type_index(typeid(uint32_t));
+        if (any_text_[column_index]) {
+          return std::type_index(typeid(std::string));
         }
         else {
-          return std::type_index(typeid(uint64_t));
+          const size_t num_levels = level_names_[column_index].size();
+          if (num_levels <= std::numeric_limits<uint8_t>::max()) {
+            return std::type_index(typeid(uint8_t));
+          }
+          else if (num_levels <= std::numeric_limits<uint16_t>::max()) {
+            return std::type_index(typeid(uint16_t));
+          }
+          else if (num_levels <= std::numeric_limits<uint32_t>::max()) {
+            return std::type_index(typeid(uint32_t));
+          }
+          else {
+            return std::type_index(typeid(uint64_t));
+          }
         }
       }
       else {
@@ -276,19 +315,25 @@ namespace ParaText {
     }
 
   private:
-    void cache_categorical_column(size_t column_index) const {
-      cat_buffer_.clear();
-      for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-        const auto &clist = column_chunks_[worker_id][column_index];
-        clist->convert_to_string();
-        auto &keys = clist->get_cat_keys();
-        const size_t sz = clist->size();
-        for (size_t i = 0; i < sz; i++) {
-          const size_t other_level_index = clist->get<size_t, false>(i);
-          cat_buffer_.push_back(get_level_index(column_index, keys[other_level_index]));
+    void cache_cat_or_text_column(size_t column_index) const {
+      if (any_text_[column_index]) {
+        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+          column_chunks_[worker_id][column_index]->convert_to_text();
         }
       }
-      cached_categorical_column_index_ = column_index;
+      else {
+        cat_buffer_.clear();
+        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+          const auto &clist = column_chunks_[worker_id][column_index];
+          auto &keys = clist->get_cat_keys();
+          const size_t sz = clist->size();
+          for (size_t i = 0; i < sz; i++) {
+            const size_t other_level_index = clist->get<size_t, false>(i);
+            cat_buffer_.push_back(get_level_index(column_index, keys[other_level_index]));
+          }
+        }
+        cached_categorical_column_index_ = column_index;
+      }
     }
 
     void update_meta_data() {
@@ -299,12 +344,15 @@ namespace ParaText {
       size_.resize(get_num_columns());
       std::fill(size_.begin(), size_.end(), 0);
       all_numeric_.resize(get_num_columns());
+      any_text_.resize(get_num_columns());
       std::fill(all_numeric_.begin(), all_numeric_.end(), true);
+      std::fill(any_text_.begin(), any_text_.end(), false);
       common_type_index_.resize(get_num_columns(), std::type_index(typeid(void)));
       for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
         for (size_t column_index = 0; column_index < column_chunks_[worker_id].size(); column_index++) {
           Semantics sem = column_chunks_[worker_id][column_index]->get_semantics();
           all_numeric_[column_index] = all_numeric_[column_index] && sem == Semantics::NUMERIC;
+          any_text_[column_index] = any_text_[column_index] || sem == Semantics::TEXT;
           size_[column_index] += column_chunks_[worker_id][column_index]->size();
         }
       }
@@ -318,11 +366,25 @@ namespace ParaText {
           column_infos_[column_index].semantics = Semantics::NUMERIC;
         }
         else {
+          /* If they're not all numeric, convert to categorical. Some may become text. */
           for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-            column_chunks_[worker_id][column_index]->convert_to_string();
+            column_chunks_[worker_id][column_index]->convert_to_cat_or_text();
+            any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
           }
-          common_type_index_[column_index] = std::type_index(typeid(uint64_t));
-          column_infos_[column_index].semantics = Semantics::CATEGORICAL;
+          /* If any became text or there were text chunks, convert all chunks for the
+             column to raw text. */
+          if (any_text_[column_index]) {
+            std::cout << "***";
+            for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+              column_chunks_[worker_id][column_index]->convert_to_text();
+            }
+            common_type_index_[column_index] = std::type_index(typeid(std::string));
+            column_infos_[column_index].semantics = Semantics::TEXT;
+          }
+          else {
+            common_type_index_[column_index] = std::type_index(typeid(uint64_t));          
+            column_infos_[column_index].semantics = Semantics::CATEGORICAL;
+          }
         }
       }
     }
@@ -389,6 +451,7 @@ namespace ParaText {
     std::vector<std::vector<std::shared_ptr<ColBasedChunk> > > column_chunks_;
     std::vector<ColumnInfo> column_infos_;
     std::vector<bool> all_numeric_;
+    std::vector<bool> any_text_;
     mutable std::vector<size_t> cat_buffer_;
     std::vector<std::type_index> common_type_index_;
   };

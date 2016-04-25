@@ -25,13 +25,14 @@
 #define PARATEXT_PARSE_PARAMS_HPP
 
 #include <string>
+#include <limits>
 
 namespace ParaText {
 
   typedef enum {ROW_BASED, COL_BASED} ParserType;
   typedef enum {NONE, SNAPPY, MSGPACK} Compression;
 
-  typedef enum {CATEGORICAL, NUMERIC, STRINGISH, UNKNOWN} Semantics;
+  typedef enum {CATEGORICAL, NUMERIC, TEXT, UNKNOWN} Semantics;
 
   struct ColumnInfo {
     std::string name;
@@ -39,14 +40,16 @@ namespace ParaText {
   };
 
   struct ParseParams {
-    ParseParams() : no_header(false), number_only(false), block_size(32768), num_threads(16), allow_quoted_newlines(false), compression(Compression::NONE), parser_type(ParserType::ROW_BASED) {}
+    ParseParams() : no_header(false), number_only(false), block_size(32768), num_threads(16), allow_quoted_newlines(false),  max_level_name_length(std::numeric_limits<size_t>::max()), max_levels(std::numeric_limits<size_t>::max()), compression(Compression::NONE), parser_type(ParserType::ROW_BASED) {}
     bool no_header;
     bool number_only;
     size_t block_size;
     size_t num_threads;
     bool allow_quoted_newlines;
-    Compression compression=NONE;
-    ParserType parser_type=ROW_BASED;
+    size_t max_level_name_length;
+    size_t max_levels;
+    Compression compression;
+    ParserType parser_type;
   };
 
 }
