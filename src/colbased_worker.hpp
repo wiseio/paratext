@@ -78,6 +78,7 @@ public:
     quote_started_ = '\0';
     escape_started_ = false;
     size_t current = begin;
+    size_t spos_line = begin, epos_line = begin;
     const size_t block_size = params.block_size;
     char buf[block_size];
     in.seekg(current, std::ios_base::beg);
@@ -139,8 +140,13 @@ public:
                 process_token();
               }
               else if (buf[i] == '\n') {
-                process_token();
-                process_newline();
+                epos_line = current + i;
+                if (epos_line - spos_line > 0) {
+                  process_token();
+                  process_newline();
+                }
+                spos_line = epos_line + 1;
+                epos_line = spos_line;
               }
               else {
                 token_.push_back(buf[i]);
@@ -151,15 +157,23 @@ public:
       }
       current += nread;
     }
-    if (column_index_ + 1 == handlers_.size()) {
+    epos_line = end + 1;
+    std::cout << "start line: " << spos_line << " end line: " << epos_line << std::endl;
+    /*
+      If we're in the last column position, process the token as some files
+      do not end with a newline.
+     */
+    if (token_.size() > 0) {
       if (NumberOnly) {
         process_token_number_only();
       } else {
         process_token();
       }
-      process_newline();
     }
-    else if (column_index_ == handlers_.size()) {
+    /*
+      If there was data on the last line, process it.
+    */
+    if (column_index_ > 0) {
       process_newline();
     }
 #ifdef PARALOAD_DEBUG
@@ -171,7 +185,7 @@ public:
   void process_newline() {
     if (column_index_ != handlers_.size()) {
       std::ostringstream ostr;
-      ostr << "too few columns on (unquoted) line: " << lines_parsed_;
+      ostr << "improper number of columns on line number (unquoted in chunk): " << (lines_parsed_ + 1) << ". Expected: " << handlers_.size();
       throw std::logic_error(ostr.str());
     }
     column_index_ = 0;
@@ -181,9 +195,8 @@ public:
   void process_token_number_only() {
     if (column_index_ >= handlers_.size()) {
       std::ostringstream ostr;
-      ostr << "invalid column index: " << column_index_ << " (" << handlers_.size() << " columns)" << std::endl;
-      std::string estr(ostr.str());
-      throw std::logic_error(estr);
+      ostr << "too many columns on line number (unquoted in chunk): " << (lines_parsed_ + 1) << ". Expected: " << handlers_.size();
+      throw std::logic_error(ostr.str());
     }
     size_t i = 0;
     bool handled = false;
@@ -217,9 +230,8 @@ public:
   void process_token() {
     if (column_index_ >= handlers_.size()) {
       std::ostringstream ostr;
-      ostr << "invalid column index: " << column_index_ << " (" << handlers_.size() << " columns)" << std::endl;
-      std::string estr(ostr.str());
-      throw std::logic_error(estr);
+      ostr << "too many columns on line number (unquoted in chunk): " << (lines_parsed_ + 1) << ". Expected: " << handlers_.size();
+      throw std::logic_error(ostr.str());
     }
     if (definitely_string_) {
       handlers_[column_index_]->process_categorical(token_.begin(), token_.end());

@@ -113,6 +113,9 @@ namespace ParaText {
 #endif
       for (size_t worker_id = 0; worker_id < maximum_chunks_; worker_id++) {
         size_t end_of_chunk = std::min(lastpos_, start_of_chunk + chunk_size);
+        if (worker_id == maximum_chunks_ - 1) {
+          end_of_chunk = lastpos_;
+        }
 #ifdef PARALOAD_DEBUG
         std::cout << "start_of_chunk: " << start_of_chunk << " end_of_chunk: " << end_of_chunk << std::endl;
 #endif

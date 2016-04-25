@@ -368,6 +368,9 @@ namespace ParaText {
       }
       for (size_t i = 0; i < threads.size(); i++) {
         threads[i].join();
+        if (!thread_exception) {
+          thread_exception = workers[i]->get_exception();
+        }
       }
       // We're now outside the parallel region.
       if (thread_exception) {
