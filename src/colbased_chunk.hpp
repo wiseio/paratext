@@ -102,8 +102,11 @@ namespace ParaText {
      */
     template <class Iterator>
     void process_categorical(Iterator begin, Iterator end) {
-      if (number_data_.size() > 0) {
-        if (begin == end || forced_semantics_ == Semantics::NUMERIC) {
+      if (forced_semantics_ == Semantics::NUMERIC) {
+        number_data_.push_back(bsd_strtod(begin, end));
+      }
+      else if (number_data_.size() > 0) {
+        if (begin == end) {
           //std::cout << "{" << std::string(begin, end);
           number_data_.push_back((long)0);
         }
