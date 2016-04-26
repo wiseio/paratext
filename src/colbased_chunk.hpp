@@ -25,6 +25,7 @@
 
 #include "parse_params.hpp"
 #include "widening_vector.hpp"
+#include "strings.hpp"
 #include <typeindex>
 
 namespace ParaText {
@@ -103,7 +104,7 @@ namespace ParaText {
     template <class Iterator>
     void process_categorical(Iterator begin, Iterator end) {
       if (forced_semantics_ == Semantics::NUMERIC) {
-        number_data_.push_back(bsd_strtod(begin, end));
+        number_data_.push_back((float)bsd_strtod(begin, end));
       }
       else if (number_data_.size() > 0) {
         if (begin == end) {

@@ -23,11 +23,18 @@
 #ifndef WISEIO_NUMPY_HELPER_HPP
 #define WISEIO_NUMPY_HELPER_HPP
 
+#include <Python.h>
+
 #include <unordered_map>
 #include <typeinfo>
 #include <typeindex>
 #include <memory>
 #include <iostream>
+
+#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
+#include <numpy/arrayobject.h>
+#include <numpy/npy_math.h>
+
 
 template <class T>
 struct numpy_type {};

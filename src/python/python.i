@@ -20,16 +20,8 @@
   Coder: Damian Eads.
  */
 
-%{
-#define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
-  //#include <Python.h>
-#include <numpy/arrayobject.h>
-#include <numpy/npy_math.h>
-#include "python/numpy_helper.hpp"
-%}
-
 %init %{
-  _import_array();
+  import_array();
 %}
 
 %exception {
@@ -67,6 +59,6 @@
 }
 
 %{
-#include "numpy_helper.hpp"
+#include "python/numpy_helper.hpp"
 %}
 
