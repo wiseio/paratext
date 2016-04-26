@@ -37,7 +37,7 @@ namespace ParaText {
     /*
       Creates a new chunk with an empty name.
      */
-    ColBasedChunk() : max_level_name_length_(std::numeric_limits<size_t>::max()), max_levels_(std::numeric_limits<size_t>::max()), force_text_(false) {}
+    ColBasedChunk() : max_level_name_length_(std::numeric_limits<size_t>::max()), max_levels_(std::numeric_limits<size_t>::max()), forced_semantics_(Semantics::UNKNOWN) {}
 
     /*
       Creates a new chunk.
@@ -45,7 +45,7 @@ namespace ParaText {
       \param column_name      The name of the column for the chunk.
      */
     ColBasedChunk(const std::string &column_name)
-      : column_name_(column_name), max_level_name_length_(std::numeric_limits<size_t>::max()), max_levels_(std::numeric_limits<size_t>::max()), force_text_(false) {}
+      : column_name_(column_name), max_level_name_length_(std::numeric_limits<size_t>::max()), max_levels_(std::numeric_limits<size_t>::max()), forced_semantics_(Semantics::UNKNOWN) {}
 
     /*
       Creates a new chunk.
@@ -56,8 +56,8 @@ namespace ParaText {
       \param max_levels              If this number of levels is exceeded, then all string fields
                                      in a column are considered categorical.
      */
-    ColBasedChunk(const std::string &column_name, size_t max_level_name_length, size_t max_levels, bool force_text)
-      : column_name_(column_name), max_level_name_length_(max_level_name_length), max_levels_(max_levels), force_text_(force_text) {}
+    ColBasedChunk(const std::string &column_name, size_t max_level_name_length, size_t max_levels, Semantics forced_semantics_)
+      : column_name_(column_name), max_level_name_length_(max_level_name_length), max_levels_(max_levels), forced_semantics_(forced_semantics_) {}
 
 
     /*
@@ -71,7 +71,7 @@ namespace ParaText {
      * to a string and treated as categorical.
      */
     void process_float(float val)               {
-      if (cat_data_.size() > 0) {
+      if (cat_data_.size() > 0 || forced_semantics_ == Semantics::CATEGORICAL || forced_semantics_ == Semantics::TEXT) {
         std::string s(std::to_string(val));
         process_categorical(s.begin(), s.end());
       }
@@ -86,7 +86,7 @@ namespace ParaText {
      * to a string and treated as categorical.
      */
     void process_integer(long val)               {
-      if (cat_data_.size() > 0) {
+      if (cat_data_.size() > 0 || forced_semantics_ == Semantics::CATEGORICAL || forced_semantics_ == Semantics::TEXT) {
         std::string s(std::to_string(val));
         process_categorical(s.begin(), s.end());
       }
@@ -103,7 +103,7 @@ namespace ParaText {
     template <class Iterator>
     void process_categorical(Iterator begin, Iterator end) {
       if (number_data_.size() > 0) {
-        if (begin == end) {
+        if (begin == end || forced_semantics_ == Semantics::NUMERIC) {
           //std::cout << "{" << std::string(begin, end);
           number_data_.push_back((long)0);
         }
@@ -185,7 +185,15 @@ namespace ParaText {
     }
     
     size_t size() const {
-      return (cat_data_.size() > 0) ? cat_data_.size() : number_data_.size();
+      if (cat_data_.size() > 0) {
+        return cat_data_.size();
+      }
+      else if (number_data_.size() > 0) {
+        return number_data_.size();
+      }
+      else {
+        return text_data_.size();
+      }
     }
     
     void clear() {
@@ -223,7 +231,7 @@ namespace ParaText {
     }
 
     void convert_to_text() {
-      if (number_data_.size() > 0) {
+      if (number_data_.size() > 0 || forced_semantics_ == Semantics::TEXT) {
         for (size_t i = 0; i < number_data_.size(); i++) {
           text_data_.push_back(std::to_string(number_data_.get<float>(i)));
         }
@@ -243,9 +251,13 @@ namespace ParaText {
     }
 
     void add_cat_data(const std::string &data) {
-      if (text_data_.size() > 0) {
+      if (forced_semantics_ == Semantics::TEXT || text_data_.size() > 0) {
         text_data_.push_back(data);
-      } else if (data.size() > max_level_name_length_ || cat_keys_.size() > max_levels_ || force_text_) {
+      }
+      else if (forced_semantics_ == Semantics::CATEGORICAL) {
+        cat_data_.push_back((long)get_string_id(data));
+      }
+      else if (data.size() > max_level_name_length_ || cat_keys_.size() > max_levels_) {
         convert_to_text();
         text_data_.push_back(data);
       }
@@ -267,7 +279,7 @@ namespace ParaText {
     std::vector<std::string>                                                   text_data_;
     size_t                                                                     max_level_name_length_;
     size_t                                                                     max_levels_;
-    bool                                                                       force_text_;
+    Semantics                                                                  forced_semantics_;
   };
 }
 #endif

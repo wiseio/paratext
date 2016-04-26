@@ -41,10 +41,19 @@ _csv_load_params_doc = """
     max_levels : int
         The maximum number of levels of a categorical column. If a column has more than
         ``max_levels`` unique strings, it is treated as text.
+
+    cat_names : sequence
+        A list of column names that should be treated as categorical regardless of its inferred type.
+
+    text_names : sequence
+        A list of column names that should be treated as rich text regardless of its inferred type.
+
+    num_names : sequence
+        A list of column names that should be treated as numeric regardless of its inferred type.
 """
 
 @_docstring_parameter(_csv_load_params_doc)
-def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None):
+def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None):
     """
     Loads a CSV file, producing a generator object that can be used to
     generate a pandas DataFrame, Wise DataSet, a dictionary, or a custom
@@ -68,8 +77,9 @@ def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_siz
 
          where ``column_name`` is the name of the column, ``data`` is
          a NumPy array, ``semantics`` is a string indicating the kind
-         of data stored (``num`` for numeric, ``cat`` for categorical),
-         and levels is a NumPy array of levels strings (if categorical).
+         of data stored (``num`` for numeric, ``cat`` for categorical,
+         ``text for rich text), and levels is a NumPy array of levels
+         strings (if categorical).
 
          Categorical levels are encoded as integers. A value data[i]
          can be decoded as a string with levels[data[i]].
@@ -81,13 +91,22 @@ def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_siz
     if num_threads > 0:
         params.num_threads = num_threads
     else:
-        params.num_threads = int(max(get_num_cores()*1.5, 4))
+        params.num_threads = int(max(pti.get_num_cores()*1.5, 4))
     params.number_only = number_only
     params.no_header = no_header
     if max_levels is not None:
         params.max_levels = max_levels;
     if max_level_name_length is not None:
         params.max_level_name_length = max_level_name_length
+    if cat_names is not None:
+        for name in cat_names:
+            loader.force_semantics(name, pti.CATEGORICAL)
+    if num_names is not None:
+        for name in num_names:
+            loader.force_semantics(name, pti.NUMERIC)
+    if text_names is not None:
+        for name in text_names:
+            loader.force_semantics(name, pti.TEXT)
     loader.load(filename, params)
     data = []
     #all_levels = {}
@@ -99,7 +118,12 @@ def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_siz
         if info.semantics == pti.CATEGORICAL:
             levels = loader.get_levels(i)
             semantics = 'cat'
-            #all_levels[info.name] = levels
+        elif info.semantics == pti.NUMERIC:
+            semantics = 'num'
+        elif info.semantics == pti.TEXT:
+            semantics = 'text'
+        else:
+            semantics = 'unknown'
         loader.forget_column(i)
         yield ((info.name, col, semantics, levels))
 
