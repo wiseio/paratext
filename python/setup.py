@@ -2,6 +2,11 @@
 import sys, os, os.path, string
 import json
 
+swig_check = os.system("which swig")
+if swig_check != 0:
+    print "Error: you must install SWIG first."
+    sys.exit(1)
+
 extra_link_args = []
 extra_compile_args = ["-std=c++11", "-msse4", "-Wall", "-Wextra", "-pthread"]
 extra_libraries = []
@@ -45,14 +50,13 @@ __version__ = "%s"
 
 init_py.close()
 
-if sys.platform in "linux2":
-    libext = "so"
-elif sys.platform in ("win32", "cygwin"):
-    libext = "dll"
-elif sys.platform in ("darwin"):
-    libext = "dylib"
 
 print version
+
+swig_cmd = 'swig -c++ -python -I../src/ -outdir ./ ../src/paratext_internal.i'
+
+print "running swig: ", swig_cmd
+os.system(swig_cmd)
 
 setup(name='paratext',
       version=version,
