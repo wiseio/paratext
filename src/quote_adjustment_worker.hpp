@@ -29,13 +29,12 @@ namespace ParaText {
 
 class QuoteNewlineAdjustmentWorker {
 public:
-  QuoteNewlineAdjustmentWorker(size_t chunk_start, size_t chunk_end, size_t file_size)
+  QuoteNewlineAdjustmentWorker(size_t chunk_start, size_t chunk_end)
     : chunk_start_(chunk_start),
       chunk_end_(chunk_end),
       num_quotes_(0),
       first_unquoted_newline_(-1),
-      first_quoted_newline_(-1),
-      file_size_(file_size) {}
+      first_quoted_newline_(-1) {}
 
   virtual ~QuoteNewlineAdjustmentWorker() {}
 

@@ -177,8 +177,7 @@ namespace ParaText {
       std::exception_ptr thread_exception;
       for (size_t worker_id = 0; worker_id < maximum_chunks_; worker_id++) {
         workers.push_back(std::make_shared<QuoteNewlineAdjustmentWorker>(start_of_chunk_[worker_id],
-                                                                         end_of_chunk_[worker_id],
-                                                                         length_));
+                                                                         end_of_chunk_[worker_id]));
         threads.emplace_back(&QuoteNewlineAdjustmentWorker::parse, workers.back(), filename_);
       }
       for (size_t thread_id = 0; thread_id < maximum_chunks_; thread_id++) {

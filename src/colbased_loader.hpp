@@ -45,7 +45,7 @@ namespace ParaText {
       : column_chunks_(column_chunks), worker_id_(worker_id), within_chunk_(within_chunk) {}
     
     T operator*() const {
-      return column_chunks_[worker_id_]->get<T, Numeric>(within_chunk_);
+      return column_chunks_[worker_id_]->template get<T, Numeric>(within_chunk_);
     }
     
     ColBasedIterator &operator++() {
