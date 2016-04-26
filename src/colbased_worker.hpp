@@ -209,10 +209,11 @@ public:
       if (token_[i] == '?' && token_.size() - i == 1) {
         handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
       }
-      else if ((token_[i] == 'n' || token_[i] == 'N') && token_.size() - i == 3) {
-        if ((token_[i+1] == 'a' || token_[i+1] == 'A') && (token_[i+2] == 'n' || token_[i+2] == 'N')) {
-          handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
-        }
+      else if (token_.size() - i == 3 &&
+               ((token_[i] == 'n' || token_[i] == 'N'))
+               && ((token_[i+1] == 'a' || token_[i+1] == 'A'))
+               && (token_[i+2] == 'n' || token_[i+2] == 'N')) {
+        handlers_[column_index_]->process_float(std::numeric_limits<float>::quiet_NaN());
       }
       else {
         if (token_[i] == '-') { i++; }
