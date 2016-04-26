@@ -221,7 +221,6 @@ private:
   long first_quoted_newline_;
   size_t num_quotes_before_first_unquoted_newline_;
   size_t num_quotes_before_first_quoted_newline_;
-  size_t file_size_;
   std::exception_ptr thread_exception_;
 };
 }
