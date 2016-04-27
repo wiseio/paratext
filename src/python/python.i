@@ -54,8 +54,8 @@
   $result = (PyObject*)::build_array<std::vector<std::string>>($1);
 }
 
-%typemap(out) ParaText::ColBasedPopulator {
-  $result = (PyObject*)::build_populator<ParaText::ColBasedPopulator>($1);
+%typemap(out) ParaText::CSV::ColBasedPopulator {
+  $result = (PyObject*)::build_populator<ParaText::CSV::ColBasedPopulator>($1);
 }
 
 %{

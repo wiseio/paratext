@@ -71,6 +71,10 @@ namespace std {
 #include "diagnostic/newline_counter.hpp"
 %}
 
+%include "diagnostic/parse_and_sum.hpp"
+%{
+#include "diagnostic/parse_and_sum.hpp"
+%}
 
 #if defined(PARATEXT_ROWBASED_CSV)
 %include "csv/rowbased_loader.hpp"

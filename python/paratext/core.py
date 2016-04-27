@@ -52,6 +52,21 @@ _csv_load_params_doc = """
         A list of column names that should be treated as numeric regardless of its inferred type.
 """
 
+def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None):
+    params = pti.ParseParams()
+    params.allow_quoted_newlines = allow_quoted_newlines
+    if num_threads > 0:
+        params.num_threads = num_threads
+    else:
+        params.num_threads = int(max(pti.get_num_cores()*2, 4))
+    params.number_only = number_only
+    params.no_header = no_header
+    if max_levels is not None:
+        params.max_levels = max_levels;
+    if max_level_name_length is not None:
+        params.max_level_name_length = max_level_name_length
+    return params
+
 @_docstring_parameter(_csv_load_params_doc)
 def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None):
     """
@@ -205,3 +220,61 @@ def load_csv_to_pandas(filename, *args, **kwargs):
     """
     import pandas
     return pandas.DataFrame.from_items(load_csv_to_expanded_columns(filename, *args, **kwargs))
+
+@_docstring_parameter(_csv_load_params_doc)
+def baseline_average_columns(filename, *args, **kwargs):
+    """
+    Computes the sum of numeric columns in a numeric-only CSV file.
+
+    Parameters
+    ----------
+    {0}
+
+    Returns
+    -------
+    d : dictionary
+        A dictionary of column averages.
+    """
+    params = _get_params(*args, **kwargs)
+    summer = pti.ParseAndSum();
+    summer.load(filename, params)
+    d = {summer.get_column_name(i): summer.get_avg(i) for i in xrange(0, summer.get_num_columns())}
+    return d
+
+
+@_docstring_parameter(_csv_load_params_doc)
+def baseline_newline_count(filename, *args, **kwargs):
+    """
+    Computes the number of newlines in the file. Note, this is not the same
+    as the number of lines in a file.
+
+    Parameters
+    ----------
+    {0}
+
+    Returns
+    -------
+    n : int
+        The number of newlines in a file.
+    """
+    params = _get_params(*args, **kwargs)
+    nc = pti.NewlineCounter();
+    count = nc.load(filename, params)
+    return count
+
+@_docstring_parameter(_csv_load_params_doc)
+def baseline_memcopy(filename, *args, **kwargs):
+    """
+    Simply copies the contents of a file into a collection of buffers
+    and then deallocates them at the end. This shows the performance of
+    reading a file without any parsing but with memory requirements that
+    grow with the size of the file.
+
+    Parameters
+    ----------
+    {0}
+    """
+    params = _get_params(*args, **kwargs)
+    mc = pti.MemCopyBaseline();
+    count = mc.load(filename, params)
+    return count
