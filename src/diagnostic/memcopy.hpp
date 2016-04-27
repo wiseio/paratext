@@ -65,7 +65,7 @@ public:
   void parse_impl(const std::string &filename) {
     std::ifstream in;
     in.open(filename.c_str());
-    const size_t block_size = 32768;
+    const size_t block_size = block_size_;
     char buf[block_size];
     in.seekg(chunk_start_, std::ios_base::beg);
     size_t current = chunk_start_;
@@ -75,7 +75,7 @@ public:
       if (nread == 0) {
         break;
       }
-      data_.emplace_back(buf, buf + nread);
+      data_.emplace_back(buf + 0, buf + nread);
       current += nread;
     }
   }
