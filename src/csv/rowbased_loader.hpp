@@ -31,6 +31,8 @@
 
 namespace ParaText {
 
+namespace CSV {
+
 class RowBasedLoader {
 public:
   RowBasedLoader() : length_(0) {}
@@ -109,5 +111,6 @@ private:
   TextChunker chunker_;
   HeaderParser header_parser_;
 };
+}
 }
 #endif

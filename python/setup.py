@@ -69,7 +69,7 @@ See README
                              ['../src/paratext_internal_wrap.cxx', '../src/paratext_internal.cpp'],
                              extra_link_args = extra_link_args,
                              extra_compile_args = extra_compile_args,
-                             include_dirs=[],
+                             include_dirs=['../src/'],
                              libraries=["stdc++"] + extra_libraries),
                    ],
       py_modules=["paratext_internal"],

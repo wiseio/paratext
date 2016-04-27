@@ -31,11 +31,12 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <thread>
+#include <sstream>
 
 #include "quote_adjustment_worker.hpp"
 
 namespace ParaText {
-  
+
   /*
     Finds chunks in a text file that break on an unquoted
     newline. Text files are separated by newline separators.  If
@@ -87,7 +88,7 @@ namespace ParaText {
       }
       compute_offsets(allow_quoted_newlines);
     }
-    
+
     /*
       Returns the number of chunks determined by this chunker.
      */
@@ -130,7 +131,7 @@ namespace ParaText {
         adjust_offsets_according_to_unquoted_newlines();
       }
     }
-    
+
     void adjust_offsets_according_to_unquoted_newlines() {
       const size_t block_size = 512;
       char buf[block_size];
@@ -170,7 +171,7 @@ namespace ParaText {
         }
       }
     }
-    
+
     void adjust_offsets_according_to_quoted_newlines() {
       std::vector<std::thread> threads;
       std::vector<std::shared_ptr<QuoteNewlineAdjustmentWorker> > workers;
@@ -246,7 +247,7 @@ namespace ParaText {
         }
       }
     }
-    
+
   private:
     std::ifstream in_;
     std::string filename_;
@@ -257,6 +258,5 @@ namespace ParaText {
     std::vector<size_t> start_of_chunk_;
     std::vector<size_t> end_of_chunk_;
   };
-  
 }
 #endif

@@ -28,6 +28,8 @@
 
 namespace ParaText {
 
+namespace CSV {
+
 class RowBasedParseWorker {
 public:
   RowBasedParseWorker(size_t chunk_start, size_t chunk_end, size_t file_size, size_t block_size, bool compression)
@@ -216,5 +218,5 @@ private:
   std::vector<size_t> starting_state_;
 };
 }
-
+}
 #endif

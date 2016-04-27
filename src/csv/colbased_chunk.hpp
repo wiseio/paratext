@@ -23,12 +23,16 @@
 #ifndef PARATEXT_COLBASED_CHUNK_HPP
 #define PARATEXT_COLBASED_CHUNK_HPP
 
-#include "parse_params.hpp"
-#include "widening_vector.hpp"
-#include "strings.hpp"
+#include "generic/parse_params.hpp"
+#include "util/widening_vector.hpp"
+#include "util/strings.hpp"
+
 #include <typeindex>
+#include <sstream>
 
 namespace ParaText {
+
+namespace CSV {
 
   /*
     Represents a chunk of parsed column data for a col-based CSV parser.
@@ -80,7 +84,7 @@ namespace ParaText {
         number_data_.push_back(val);
       }
     }
-    
+
     /*
      * Passes a floating point datum to the column handler. If categorical
      * data was previously passed to this handler, this datum will be converted
@@ -187,7 +191,7 @@ namespace ParaText {
     const std::vector<std::string> &get_cat_keys() const {
       return cat_keys_;
     }
-    
+
     size_t size() const {
       if (cat_data_.size() > 0) {
         return cat_data_.size();
@@ -199,7 +203,7 @@ namespace ParaText {
         return text_data_.size();
       }
     }
-    
+
     void clear() {
       number_data_.clear();
       cat_data_.clear();
@@ -210,7 +214,7 @@ namespace ParaText {
     size_t get_string(size_t idx) {
       return cat_data_.get<size_t>(idx);
     }
-    
+
     size_t get_string_id(const std::string &key) {
       auto it = cat_ids_.find(key);
       if (it == cat_ids_.end()) {
@@ -219,7 +223,7 @@ namespace ParaText {
       }
       return it->second;
     }
-    
+
     /*
      * Converts all floating point data collected by this handler into
      * categorical data.
@@ -285,5 +289,6 @@ namespace ParaText {
     size_t                                                                     max_levels_;
     Semantics                                                                  forced_semantics_;
   };
+}
 }
 #endif

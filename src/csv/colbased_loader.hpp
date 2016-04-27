@@ -23,16 +23,19 @@
 #ifndef PARATEXT_COLBASED_LOADER_HPP
 #define PARATEXT_COLBASED_LOADER_HPP
 
-#include "parse_params.hpp"
+#include "generic/parse_params.hpp"
+#include "generic/chunker.hpp"
+
+#include "header_parser.hpp"
 #include "colbased_chunk.hpp"
 #include "colbased_worker.hpp"
-#include "chunker.hpp"
-#include "header_parser.hpp"
+
 #include <memory>
 #include <fstream>
 
 namespace ParaText {
 
+  namespace CSV {
   /*
     An iterator for traversing parsed columns in a col-based CSV parser.
    */
@@ -527,6 +530,6 @@ namespace ParaText {
   size_t ColBasedPopulator::size() const {
     return loader_->size(column_index_);
   }
-
+  }
 }
 #endif

@@ -30,6 +30,8 @@
 
 namespace ParaText {
 
+namespace CSV {
+
   /*
     Parses the first line of a CSV file to determine the header.
    */
@@ -194,5 +196,6 @@ namespace ParaText {
     size_t end_of_header_;
     bool has_header_;
   };
+}
 }
 #endif

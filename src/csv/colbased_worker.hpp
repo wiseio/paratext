@@ -24,14 +24,16 @@
 #ifndef WISEIO_PARSE_WORKER_COL_BASED_HPP
 #define WISEIO_PARSE_WORKER_COL_BASED_HPP
 
-#include "strings.hpp"
-#include "widening_vector.hpp"
+#include "util/strings.hpp"
+#include "util/widening_vector.hpp"
 
 #include <fstream>
 #include <exception>
 #include <stdexcept>
 
 namespace ParaText {
+
+namespace CSV {
 
 template <class ColumnHandler>
 class ColBasedParseWorker {
@@ -344,6 +346,7 @@ private:
   bool                                         escape_started_;
   std::exception_ptr                           thread_exception_;
 };
+}
 }
 
 #endif
