@@ -404,8 +404,6 @@ namespace ParaText {
                              header_parser_.get_end_of_header(),
                              length_,
                              params);
-        start_of_chunk = end_of_chunk + 1;
-        if (start_of_chunk >= length_)  {break;}
       }
       for (size_t i = 0; i < threads.size(); i++) {
         threads[i].join();

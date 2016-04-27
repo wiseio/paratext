@@ -61,6 +61,11 @@ namespace std {
 #include "csv/colbased_loader.hpp"
 %}
 
+%include "diagnostic/memcopy.hpp"
+%{
+#include "diagnostic/memcopy.hpp"
+%}
+
 #if defined(PARATEXT_ROWBASED_CSV)
 %include "csv/rowbased_loader.hpp"
 %{
