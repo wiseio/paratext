@@ -58,7 +58,7 @@ def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, nu
     if num_threads > 0:
         params.num_threads = num_threads
     else:
-        params.num_threads = int(max(pti.get_num_cores()*2, 4))
+        params.num_threads = int(max(pti.get_num_cores(), 4))
     params.number_only = number_only
     params.no_header = no_header
     if max_levels is not None:
@@ -106,7 +106,7 @@ def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_siz
     if num_threads > 0:
         params.num_threads = num_threads
     else:
-        params.num_threads = int(max(pti.get_num_cores()*2, 4))
+        params.num_threads = int(max(pti.get_num_cores(), 4))
     params.number_only = number_only
     params.no_header = no_header
     if max_levels is not None:
