@@ -66,6 +66,12 @@ namespace std {
 #include "diagnostic/memcopy.hpp"
 %}
 
+%include "diagnostic/newline_counter.hpp"
+%{
+#include "diagnostic/newline_counter.hpp"
+%}
+
+
 #if defined(PARATEXT_ROWBASED_CSV)
 %include "csv/rowbased_loader.hpp"
 %{
