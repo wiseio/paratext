@@ -34,6 +34,181 @@ namespace ParaText {
 
 namespace CSV {
 
+  class ColHolder {
+  public:
+    ColHolder() {}
+    virtual ~ColHolder() {}
+
+    virtual ColHolder *process_categorical(const std::vector<char> &token) = 0;
+    virtual ColHolder *process_float(float val) = 0;
+    virtual ColHolder *process_integer(long val) = 0;
+
+  private:
+    std::vector<char> buffer_;
+  };
+
+  template <class ForceType, bool ForceNumeric>
+  class NumColHolder {
+  public:
+    NumHolder() {}
+    virtual ~NumColHolder() {}
+
+    virtual ColHolder *process_categorical(const std::vector<char> &token) {
+      process_categorical_impl<ForceNumeric>(token);
+      return this;
+    }
+
+    template <bool ForceNumeric_>
+    std::enable_if<!ForceNumeric_ && std::is_floating_point<ForceType>::value, ColHolder*> process_categorical_impl(const std::vector<char> &token) {
+      std::unique_ptr<TextHolder> holder;
+      for (size_t i = 0; i < data_.size(); i++) {
+        Holder *other = holder->process_float(data_[i]);
+        if (other == holder) {
+          holder.reset(other);
+        }
+      }
+      holder->process_categorical_impl(token);
+      if (other == holder) {
+        holder.reset(other);
+      }
+      return holder.release();
+    }
+
+    template <bool ForceNumeric_>
+    std::enable_if<!ForceNumeric_ && std::is_integral<ForceType>::value, ColHolder*> process_categorical_impl(const std::vector<char> &token) {
+      std::unique_ptr<TextHolder> holder;
+      for (size_t i = 0; i < data_.size(); i++) {
+        Holder *other = holder->process_float(data_[i]);
+        if (other == holder) {
+          holder.reset(other);
+        }
+      }
+      holder->process_categorical_impl(token);
+      if (other == holder) {
+        holder.reset(other);
+      }
+      return holder.release();
+    }
+
+    template <bool ForceNumeric_>
+    std::enable_if<ForceNumeric_, ColHolder*> process_categorical_impl(const std::vector<char> &token) {
+      data_.push_back(parse<ForceType>(token.begin(), token.end()));
+      return this;
+    }
+
+    virtual ColHolder *process_float(float val) {
+      data_.push_back((ForceType)val);
+      return this;
+    };
+
+    virtual ColHolder *process_integer(long val) {
+      data_.push_back((ForceType)val);
+      return this;
+    }
+
+  private:
+    std::vector <ForceType> data_;
+  };
+
+  template <bool ForceNumeric>
+  class NumColHolder<void, ForceNumeric> {
+  public:
+    NumHolder() {}
+    virtual ~NumColHolder() {}
+
+    virtual ColHolder *process_categorical(const std::vector<char> &token) {
+      data_.push_back(parse<ForceType>(token_.begin(), token.end()));
+      return this;
+    }
+
+    virtual ColHolder *process_float(float val) {
+      data_.push_back(val);
+      return this;
+    };
+
+    virtual ColHolder *process_integer(long val) {
+      data_.push_back(val);
+      return this;
+    }
+
+    template <bool ForceNumeric_>
+    std::enable_if<!ForceNumeric_, ColHolder*> process_categorical_impl(const std::vector<char> &token) {
+      std::unique_ptr<TextHolder> holder;
+      std::type_index idx = data_.get_type_index();
+      if (idx == std::type_index(id(float))) {
+        for (size_t i = 0; i < data_.size(); i++) {
+          Holder *other = holder->process_categorical(std::to_string(data_.get<float>[i]));
+          if (other == holder) {
+            holder.reset(other); 
+          }
+        }
+      }
+      holder->process_categorical_impl(token);
+      if (other == holder) {
+        holder.reset(other);
+      }
+      return holder.release();
+    }
+
+  private:
+    widening_vector_dynamic<uint8_t, int8_t, int16_t, int32_t, int64_t, float> data_;
+  };
+
+  class TextColHolder {
+  public:
+    TextColHolder() {}
+    virtual ~TextColHolder() {}
+
+    virtual ColHolder *process_categorical(const std::vector<char> &token) {
+      data_.emplace_back(token_.begin(), token.end());
+      return this;
+    }
+
+    virtual ColHolder *process_float(float val) {
+      data_.push_back(std::move(std::to_string(val)));
+      return this;
+    };
+
+    virtual ColHolder *process_integer(long val) {
+      data_.push_back(std::move(std::to_string(val)));
+      return this;
+    }
+
+  private:
+    std::vector<std::string> data_;
+  };
+
+  template <bool ForceCat, bool LevelLimit, bool LengthLimit>
+  class CatColHolder {
+  public:
+    CatColHolder() {}
+    virtual ~CatColHolder() {}
+
+    virtual ColHolder *process_categorical(const std::vector<char> &token) {
+      data_.push_back(get_level(token.begin(), token.end()));
+      return this;
+    }
+
+    typename std::enable_if<!LevelLimit && LengthLimit, ColHolder *>::type process_categorical_impl(const std::vector<char> &token) {
+      if (token.size() > length_limit) {
+        
+      }
+    }
+
+    virtual ColHolder *process_float(float val) {
+      data_.push_back(get_level(std::to_string(val)));
+      return this;
+    };
+
+    virtual ColHolder *process_integer(long val) {
+      data_.push_back(get_level(std::to_string(val)));
+      return this;
+    }
+
+  private:
+    std::vector<std::string> data_;
+  };
+
   /*
     Represents a chunk of parsed column data for a col-based CSV parser.
   */
