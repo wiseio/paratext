@@ -25,12 +25,14 @@ datasets = {"mnist":
             {"csv": "messy.csv",
              "feather": "messy.feather",
              "pickle": "messy.pkl",
-             "qnl": True},
+             "qnl": True,
+             "max_level_name_length": 0},
             "messy2":
             {"csv": "messy2.csv",
              "feather": "messy2.feather",
              "pickle": "messy2.pkl",
-             "qnl": True},
+             "qnl": True,
+             "max_level_name_length": 0},
             "car":
             {"csv": "car.csv",
              "feather": "car.feather",
@@ -61,6 +63,9 @@ for name, attr in datasets.iteritems():
                                   "disk_state": disk_state,
                                   "block_size": block_size,
                                   "log": str(len(all_params)) + ".log"}
+                        mlnl = attr.get("max_level_name_length", None)
+                        if mlnl:
+                            params["max_level_name_length"] = mlnl
                         all_params.append(params)
         for cmd in ["sframe", "pandas", "numpy"]:
             params = {"cmd": cmd,

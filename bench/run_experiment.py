@@ -63,7 +63,7 @@ def run_average_columns_baseline(params):
     return {}
 
 def run_paratext(params):
-    d, levels = paratext.load_csv_to_dict(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False), allow_quoted_newlines=params.get("allow_quoted_newlines", False))
+    d, levels = paratext.load_csv_to_dict(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False), allow_quoted_newlines=params.get("allow_quoted_newlines", False), max_level_name_length=params.get("max_level_name_length", None))
     sum_time = 0
     if params.get("sum_after", False):
         sum_tic = time.time()

@@ -40,11 +40,12 @@ _csv_load_params_doc = """
     max_level_name_length : int
         The maximum length of a categorical level name. If a text field has
         a length that exceeds this length, the entire column is treated as
-        text.
+        text. (default=max integer)
 
     max_levels : int
         The maximum number of levels of a categorical column. If a column
         has more than ``max_levels`` unique strings, it is treated as text.
+        (default=max integer)
 
     cat_names : sequence
         A list of column names that should be treated as categorical
