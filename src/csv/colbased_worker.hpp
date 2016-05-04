@@ -336,6 +336,14 @@ public:
     token_.clear();
   }
 
+  void convert_to_cat_or_text(size_t column_index) {
+    handlers_[column_index]->convert_to_cat_or_text();
+  }
+
+  void convert_to_text(size_t column_index) {
+    handlers_[column_index]->convert_to_text();
+  }
+
 private:
   std::vector<std::shared_ptr<ColumnHandler> > handlers_;
   std::vector<char>                            token_;

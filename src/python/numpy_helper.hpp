@@ -92,7 +92,7 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
         PyObject *newobj = PyString_FromStringAndSize(container[i].c_str(), container[i].size());
         Py_XDECREF(*ref);
         *ref = newobj;
-        Py_XINCREF(*ref);
+        //Py_XINCREF(*ref);
       }
     }
     catch (...) {
@@ -154,7 +154,7 @@ struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_sam
         PyObject *newobj = PyString_FromStringAndSize((*it).c_str(), (*it).size());
         Py_XDECREF(*ref);
         *ref = newobj;
-        Py_XINCREF(*ref);
+        //Py_XINCREF(*ref);
       }
     }
     catch (...) {
@@ -214,7 +214,7 @@ struct string_array_output_iterator  : public std::iterator<std::forward_iterato
     PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
     Py_XDECREF(*ref);
     *ref = s;
-    Py_XINCREF(*ref);
+    //Py_XINCREF(*ref);
     i++;
     return *this;
   }

@@ -37,7 +37,8 @@ datasets = {"mnist":
             {"csv": "car.csv",
              "feather": "car.feather",
              "pickle": "car.pkl",
-             "qnl": False},
+             "qnl": False,
+             "no_header": False},
             "floats":
             {"csv": "floats.csv",
              "feather": "floats.feather",
@@ -57,7 +58,7 @@ for name, attr in datasets.iteritems():
                     for cmd in cmds:
                         params = {"cmd": cmd,
                                   "filename": attr["csv"],
-                                  "no_header": True,
+                                  "no_header": attr.get("no_header", True),
                                   "allow_quoted_newlines": attr.get("qnl", False),
                                   "num_threads": num_threads,
                                   "disk_state": disk_state,

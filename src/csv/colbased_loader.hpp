@@ -334,16 +334,23 @@ namespace ParaText {
         }
         else {
           /* If they're not all numeric, convert to categorical. Some may become text. */
+          convert_column_to_cat_or_text(column_index);
+          for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+            any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
+          }
+          /*
           for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
             column_chunks_[worker_id][column_index]->convert_to_cat_or_text();
             any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
-          }
+            }*/
           /* If any became text or there were text chunks, convert all chunks for the
              column to raw text. */
           if (any_text_[column_index]) {
+            convert_column_to_text(column_index);
+            /*
             for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
               column_chunks_[worker_id][column_index]->convert_to_text();
-            }
+              }*/
             common_type_index_[column_index] = std::type_index(typeid(std::string));
             column_infos_[column_index].semantics = Semantics::TEXT;
           }
@@ -414,6 +421,44 @@ namespace ParaText {
       // We're now outside the parallel region.
       if (thread_exception) {
         std::rethrow_exception(thread_exception);
+      }
+    }
+
+  private:
+    void convert_column_to_cat_or_text(size_t column_index) {
+      std::vector<std::thread> threads;
+      std::vector<std::shared_ptr<ColBasedParseWorker<ColBasedChunk> > > workers;
+      std::exception_ptr thread_exception;
+      for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+        workers.push_back(std::make_shared<ColBasedParseWorker<ColBasedChunk> >(column_chunks_[worker_id]));
+        threads.emplace_back(&ColBasedParseWorker<ColBasedChunk>::convert_to_cat_or_text,
+                             workers.back(),
+                             column_index);
+      }
+      for (size_t thread_id = 0; thread_id < threads.size(); thread_id++) {
+        threads[thread_id].join();
+
+        if (!thread_exception) {
+          thread_exception = workers[thread_id]->get_exception();
+        }
+      }
+    }
+
+    void convert_column_to_text(size_t column_index) {
+      std::vector<std::thread> threads;
+      std::vector<std::shared_ptr<ColBasedParseWorker<ColBasedChunk> > > workers;
+      std::exception_ptr thread_exception;
+      for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+        workers.push_back(std::make_shared<ColBasedParseWorker<ColBasedChunk> >(column_chunks_[worker_id]));
+        threads.emplace_back(&ColBasedParseWorker<ColBasedChunk>::convert_to_text,
+                             workers.back(),
+                             column_index);
+      }
+      for (size_t thread_id = 0; thread_id < threads.size(); thread_id++) {
+        threads[thread_id].join();
+        if (!thread_exception) {
+          thread_exception = workers[thread_id]->get_exception();
+        }
       }
     }
 
