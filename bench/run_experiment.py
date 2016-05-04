@@ -222,12 +222,16 @@ def main():
     if logfn is None:
         print log_entry
     else:
+        old_log = []
+        if os.path.isfile(logfn):
+            old_log = json.load(open(logfn, "r"))
+        old_log.append(log_entry)
         log_fid = open(logfn, "a")
-        log_fid.write(json.dumps(log_entry))
+        log_fid.write(json.dumps(old_log))
     retval = None
 
 if __name__ == "__main__":
-    main();
+    main()
 
 
 

@@ -12,7 +12,7 @@ def convert_feather(df, output_filename):
 def convert_hdf5(df, output_filename):
     X = df.values
     f = h5py.File(output_filename, "w")
-    ds=f.create_dataset("mnist", X.shape, dtype=X.dtype)
+    ds=f.create_dataset("mydataset", X.shape, dtype=X.dtype)
     ds[...] = X
 
 def convert_npy(df, output_filename):
