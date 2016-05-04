@@ -259,23 +259,14 @@ namespace CSV {
     }
 
     void add_cat_data(const std::string &data) {
-      if (forced_semantics_ == Semantics::TEXT || text_data_.size() > 0) {
-        text_data_.push_back(data);
-      }
-      else if (forced_semantics_ == Semantics::CATEGORICAL) {
-        cat_data_.push_back((long)get_string_id(data));
-      }
-      else if (data.size() > max_level_name_length_ || cat_keys_.size() > max_levels_) {
-        convert_to_text();
-        text_data_.push_back(data);
-      }
-      else {
-        cat_data_.push_back((long)get_string_id(data));
+      ColBasedHolder *other = holder->process_categorical();
+      if (other != holder.get()) {
+        holder.reset(other);
       }
     }
 
     const std::string &get_text(size_t i) const {
-      return text_data_[i];
+      return holder.get_text(i);
     }
 
   private:

@@ -270,4 +270,19 @@ done:
         return sign ? -fraction : fraction;
 }
 
+template <class T, class Iterator>
+void parse_num_impl(Iterator begin, Iterator end, std::true_type) {
+  return bsd_strtod(begin, end);
+}
+
+template <class T, class Iterator>
+void parse_num_impl(Iterator begin, Iterator end, std::false_type) {
+  return fast_atoi(begin, end);
+}
+
+template <class T, class Iterator>
+static T parse_num(Iterator begin, Iterator end) {
+  return parse_num_impl<T, Iterator>(begin, end, std::is_floating_point<T>::value);
+}
+
 #endif

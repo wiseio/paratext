@@ -26,6 +26,7 @@
 
 #include "util/strings.hpp"
 #include "util/widening_vector.hpp"
+#include "colbased_holder2.hpp"
 
 #include <fstream>
 #include <exception>
