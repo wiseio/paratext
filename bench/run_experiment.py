@@ -226,9 +226,11 @@ def main():
     params = generate_params(sys.argv[1], sys.argv[2:], param_types)
     cmd = params.get("cmd", "")
     tic = time.time()
-    logfn = None
+    log_fn = None
     if "log" in params:
-        logfn = params["log"]
+        log_fn = params["log"]
+        log_path = os.environ.get("PARATEXT_BENCH_LOG_PATH", ".")
+        log_fn = os.path.join(log_path, log_fn)
         params.pop("log")
     results = {}
     if cmd == "feather":
@@ -275,16 +277,16 @@ def main():
         log_entry["tput_bytes"] = sz / runtime
         log_entry["tput_MB"] = (sz/1000000) / runtime
         log_entry["tput_MiB"] = (sz/1048576) / runtime
-    if logfn is None:
+    if log_fn is None:
         print log_entry
     else:
         old_log = {"log": []}
-        if os.path.isfile(logfn):
-            old_log_fid = open(logfn, "r")
+        if os.path.isfile(log_fn):
+            old_log_fid = open(log_fn, "r")
             old_log = json.load(old_log_fid)
             old_log_fid.close()
         old_log["log"].append(log_entry)
-        log_fid = open(logfn, "w")
+        log_fid = open(log_fn, "w")
         json.dump(old_log, log_fid)
         log_fid.close()
     results = None
