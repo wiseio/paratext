@@ -35,7 +35,7 @@ datasets = {"mnist":
             {"csv": "car.csv",
              "feather": "car.feather",
              "pickle": "car.pkl",
-             "qnl": True},
+             "qnl": False},
             "floats":
             {"csv": "floats.csv",
              "feather": "floats.feather",
