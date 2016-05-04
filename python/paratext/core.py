@@ -1,8 +1,9 @@
 """
-Name:    paracsv
+Name:    paratext
 Author:  Damian Eads
-Purpose: Loads CSV files using multiple cores.
+Purpose: Loads text data (e.g. CSV) files using multiple cores.
 """
+
 import paratext_internal as pti
 
 import random
@@ -29,27 +30,33 @@ _csv_load_params_doc = """
         The number of bytes to read at a time in each worker. (default=32768)
 
     number_only : bool
-        Whether it can be safely assumed the columns only contain numbers. (default=False)
+        Whether it can be safely assumed the columns only contain numbers.
+        (default=False)
 
     no_header : bool
-        Do not auto-detect the presence of a header. Assume the first line is data. (default=False)
+        Do not auto-detect the presence of a header. Assume the first line
+        is data. (default=False)
 
     max_level_name_length : int
-        The maximum length of a categorical level name. If a text field has a length that
-        exceeds this length, the entire column is treated as text.
+        The maximum length of a categorical level name. If a text field has
+        a length that exceeds this length, the entire column is treated as
+        text.
 
     max_levels : int
-        The maximum number of levels of a categorical column. If a column has more than
-        ``max_levels`` unique strings, it is treated as text.
+        The maximum number of levels of a categorical column. If a column
+        has more than ``max_levels`` unique strings, it is treated as text.
 
     cat_names : sequence
-        A list of column names that should be treated as categorical regardless of its inferred type.
+        A list of column names that should be treated as categorical
+        regardless of its inferred type.
 
     text_names : sequence
-        A list of column names that should be treated as rich text regardless of its inferred type.
+        A list of column names that should be treated as rich text
+        regardless of its inferred type.
 
     num_names : sequence
-        A list of column names that should be treated as numeric regardless of its inferred type.
+        A list of column names that should be treated as numeric
+        regardless of its inferred type.
 """
 
 def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None):
@@ -68,7 +75,122 @@ def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, nu
     return params
 
 @_docstring_parameter(_csv_load_params_doc)
-def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None):
+def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None):
+    """
+    Creates a ParaText internal C++ CSV reader object and reads the CSV
+    file in parallel. This function ordinarily should not be called directly.
+
+    Parameters
+    ----------
+    {0}
+
+    Returns
+    -------
+    gen : a Python generator object
+
+         Each value of the generator is a tuple.
+    """
+    loader = pti.ColBasedLoader()
+    params = pti.ParseParams()
+    params.allow_quoted_newlines = allow_quoted_newlines
+    if num_threads > 0:
+        params.num_threads = num_threads
+    else:
+        params.num_threads = int(max(pti.get_num_cores(), 4))
+    params.number_only = number_only
+    params.no_header = no_header
+    if max_levels is not None:
+        params.max_levels = max_levels;
+    if max_level_name_length is not None:
+        params.max_level_name_length = max_level_name_length
+    if cat_names is not None:
+        for name in cat_names:
+            loader.force_semantics(name, pti.CATEGORICAL)
+    if num_names is not None:
+        for name in num_names:
+            loader.force_semantics(name, pti.NUMERIC)
+    if text_names is not None:
+        for name in text_names:
+            loader.force_semantics(name, pti.TEXT)
+    loader.load(filename, params)
+    return loader
+
+def internal_csv_loader_transfer(loader, forget=True, expand=False):
+    """
+    This function should not be called directly. 
+
+    It transfers data already loaded into C++ worker scratch space
+    column-by-column into a numpy array.
+
+    Parameters
+    ----------
+    loader : paratext.paratext_internal.ColBasedLoader
+         An internal ParaText loader object. The ``.load()`` function
+         has already been called.
+
+    forget : bool
+         Whether to deallocate associated scratch space once a column
+         has been transfered.
+
+    expand : bool
+         Whether to expand categorical data into string columns.
+
+    Returns
+    -------
+    gen : a Python generator object
+
+         Case 1 (expand=False) Each value of the generator is a tuple::
+
+             (column_name, data, semantics, levels)
+
+         where ``column_name`` is the name of the column, ``data`` is
+         a NumPy array, ``semantics`` is a string indicating the kind
+         of data stored (``num`` for numeric, ``cat`` for categorical,
+         ``text for rich text), and levels is a NumPy array of levels
+         strings (if categorical).
+
+         Categorical levels are encoded as integers. A value data[i]
+         can be decoded as a string with levels[data[i]].
+
+         Case 2 (expand=True) Each value of the generator is a tuple::
+
+             (column_name, data)
+
+         where ``column_name`` is the name of the column, ``data`` is
+         a NumPy array, ``semantics`` is a string indicating the kind
+         of data stored (``num`` for numeric, ``cat`` for categorical,
+         ``text for rich text), and levels is a NumPy array of levels
+         strings (if categorical). All categorical columns are converted
+         to string columns, however identical level values refer to the
+         same string object to save space.
+
+    """
+    for i in xrange(0, loader.get_num_columns()):
+        col = loader.get_column(i)
+        info = loader.get_column_info(i)
+        semantics = 'num'
+        levels = None
+        if info.semantics == pti.CATEGORICAL:
+            levels = loader.get_levels(i)
+            semantics = 'cat'
+        elif info.semantics == pti.NUMERIC:
+            semantics = 'num'
+        elif info.semantics == pti.TEXT:
+            semantics = 'text'
+        else:
+            semantics = 'unknown'
+        if forget:
+            loader.forget_column(i)
+        if expand:
+            if info.semantics == pti.CATEGORICAL:
+                yield ((info.name, col[levels], semantics))
+            else:
+                yield ((info.name, col, semantics))
+        else:
+            yield ((info.name, col, semantics, levels))
+
+@_docstring_parameter(_csv_load_params_doc)
+def load_raw_csv(filename, *args, **kwargs):
     """
     Loads a CSV file, producing a generator object that can be used to
     generate a pandas DataFrame, Wise DataSet, a dictionary, or a custom
@@ -100,47 +222,8 @@ def load_raw_csv(filename, num_threads=0, allow_quoted_newlines=False, block_siz
          can be decoded as a string with levels[data[i]].
 
     """
-    loader = pti.ColBasedLoader()
-    params = pti.ParseParams()
-    params.allow_quoted_newlines = allow_quoted_newlines
-    if num_threads > 0:
-        params.num_threads = num_threads
-    else:
-        params.num_threads = int(max(pti.get_num_cores(), 4))
-    params.number_only = number_only
-    params.no_header = no_header
-    if max_levels is not None:
-        params.max_levels = max_levels;
-    if max_level_name_length is not None:
-        params.max_level_name_length = max_level_name_length
-    if cat_names is not None:
-        for name in cat_names:
-            loader.force_semantics(name, pti.CATEGORICAL)
-    if num_names is not None:
-        for name in num_names:
-            loader.force_semantics(name, pti.NUMERIC)
-    if text_names is not None:
-        for name in text_names:
-            loader.force_semantics(name, pti.TEXT)
-    loader.load(filename, params)
-    data = []
-    #all_levels = {}
-    for i in xrange(0, loader.get_num_columns()):
-        col = loader.get_column(i)
-        info = loader.get_column_info(i)
-        semantics = 'num'
-        levels = None
-        if info.semantics == pti.CATEGORICAL:
-            levels = loader.get_levels(i)
-            semantics = 'cat'
-        elif info.semantics == pti.NUMERIC:
-            semantics = 'num'
-        elif info.semantics == pti.TEXT:
-            semantics = 'text'
-        else:
-            semantics = 'unknown'
-        loader.forget_column(i)
-        yield ((info.name, col, semantics, levels))
+    loader = internal_create_csv_loader(filename, *args, **kwargs)
+    return internal_csv_loader_transfer(loader, forget=True)
 
 @_docstring_parameter(_csv_load_params_doc)
 def load_csv_to_dict(filename, *args, **kwargs):
@@ -156,6 +239,8 @@ def load_csv_to_dict(filename, *args, **kwargs):
     d : dict
         The values are the column data as arrays, which are keyed by
         name.
+    levels : dict
+        The levels for categorical columns.
     """
     all_levels = {}
     frame = {}
