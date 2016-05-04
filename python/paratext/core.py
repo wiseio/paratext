@@ -86,9 +86,10 @@ def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=Fa
 
     Returns
     -------
-    gen : a Python generator object
+    loader : a paratext_internal.ColBasedLoader object
 
-         Each value of the generator is a tuple.
+         Returns a C++ loader object with the parsed CSV embedded in the
+         parallel worker's scratch space.
     """
     loader = pti.ColBasedLoader()
     params = pti.ParseParams()

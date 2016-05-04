@@ -12,19 +12,24 @@ ParaText requires the following tools:
    - a C++ compiler that is C++11 compliant (gcc 4.8 and above)
    - SWIG 2.0.11 or above
    - Python (2.7 or above)
+   - setuptools
+   - Pandas
 
 Compilation (Python)
 --------------------
 
-First, in the root directory, generate the SWIG bindings::
+1. go into the Python directory::
 
-   swig -c++ -python -Isrc/ -outdir python/ src/paratext_internal.i
-   
-If the bindings are generated successsfully, go into the Python directory
-and build the Python package.
+   cd python/
 
-   python setup.py build install
-   
+2. build the binary::
+
+   python setup.py build
+
+3. install it and include an optional prefix::
+
+   python setup.py build install --prefix=/tmp/qqq
+
 Usage (Python)
 --------------
 
