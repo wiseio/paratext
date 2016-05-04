@@ -334,23 +334,22 @@ namespace ParaText {
         }
         else {
           /* If they're not all numeric, convert to categorical. Some may become text. */
-          convert_column_to_cat_or_text(column_index);
+          /*convert_column_to_cat_or_text(column_index);
           for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
             any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
-          }
-          /*
+            }*/
+          
           for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
             column_chunks_[worker_id][column_index]->convert_to_cat_or_text();
             any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
-            }*/
+            }
           /* If any became text or there were text chunks, convert all chunks for the
              column to raw text. */
           if (any_text_[column_index]) {
-            convert_column_to_text(column_index);
-            /*
+            //convert_column_to_text(column_index);           
             for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
               column_chunks_[worker_id][column_index]->convert_to_text();
-              }*/
+            }
             common_type_index_[column_index] = std::type_index(typeid(std::string));
             column_infos_[column_index].semantics = Semantics::TEXT;
           }
