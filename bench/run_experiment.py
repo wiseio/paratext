@@ -15,22 +15,38 @@ import pickle
 import cPickle
 import sframe
 
-types = {"num_threads": int,
-         "block_size": int,
-         "allow_quoted_newlines": bool,
-         "type_hints_json": str,
-         "no_header": bool}
-
 def sum_sframe(df):
     s = {}
     for key in df.column_names():
-        if df[key].dtype != np.object_:
+        if df[key].dtype() in (str, unicode):
+            s[key] = df[key].apply(lambda x: len(x)).sum()
+        else:
             s[key] = df[key].sum()
     return s
 
+def sum_dataframe(df):
+    s = {}
+    for key in df.keys():
+        if df[key].dtype in (str, unicode, np.object):
+            s[key] = df[key].apply(lambda x: len(x)).sum()
+        else:
+            s[key] = df[key].sum()
+    return s
+
+def sum_dictframe(d, levels):
+    s = {}
+    for key in d.keys():
+        if key in levels.keys():
+            level_sums = np.array([len(el) for el in levels[key]])
+            s[key] = level_sums[d[key]].sum()
+        elif d[key].dtype == np.object_:
+            s[key] = level
+        else:
+            s[key] = d[key].sum()
+    return s
 
 def memory_usage_resource():
-    "This function is from Fabian Pedregosa's blog... http://bit.ly/26RguwI"
+    "This function is from Fabian Pedregosa's blog post on measuring python memory usage... http://bit.ly/26RguwI"
     import resource
     rusage_denom = 1024.
     if sys.platform == 'darwin':
@@ -38,28 +54,27 @@ def memory_usage_resource():
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / rusage_denom
     return mem
 
-def run_memcopy_baseline(params):
-    d = paratext.baseline_memcopy(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1))
-    return d
+def run_disk_to_mem_baseline(params):
+    d = paratext.baseline_disk_to_mem(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1))
+    return {}
 
 def run_average_columns_baseline(params):
     avg = paratext.baseline_average_columns(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False), allow_quoted_newlines=params.get("allow_quoted_newlines", False))
-    return avg
+    return {}
 
 def run_paratext(params):
     d, levels = paratext.load_csv_to_dict(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False), allow_quoted_newlines=params.get("allow_quoted_newlines", False))
+    sum_time = 0
     if params.get("sum_after", False):
-        s = {}
-        levels = None
-        for key in df.keys():
-            if key not in levels and d[keys].dtype != np.object_:
-                np.array([len(el) for el in levels[key]])
-                d[key] = levels[key][d[key]]
-    return d, levels
+        sum_tic = time.time()
+        s = sum_dictframe(d, levels)
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def run_count_newlines_baseline(params):
     count = paratext.baseline_newline_count(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False))
-    return count
+    return {}
 
 def run_pandas(params): #filename, type_hints_json=None, no_header=False):
     if params["no_header"]:
@@ -75,9 +90,13 @@ def run_pandas(params): #filename, type_hints_json=None, no_header=False):
         df = pandas.read_csv(params["filename"], dtype=dtypes, header=header)
     else:
         df = pandas.read_csv(params["filename"], header=header)
+    sum_time = 0
     if params.get("sum_after", False):
+        sum_tic = time.time()
         s = df.sum(numeric_only=True)
-    return df
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def run_numpy(params):
     if params.get("no_header", False):
@@ -89,58 +108,88 @@ def run_numpy(params):
     else:
         dtype = float
     X = np.loadtxt(params["filename"], dtype=dtype, skiprows=skiprows, delimiter=',')
+    sum_time = 0
     if params.get("sum_after", False):
+        sum_tic = time.time()
         s = X.sum()
-    return X
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def run_pickle(params):
     fid = open(params["filename"])
     df = pickle.load(fid)
     fid.close()
-    if params.get("sum_after", False):
+    sum_time = 0
+    sum_after = params.get("sum_after", False)
+    if sum_after:
+        print ">>>", sum_after, type(sum_after)
+        sum_tic = time.time()
         s = df.sum(numeric_only=True)
-    return df
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def run_cPickle(params):
     fid = open(params["filename"])
     df = cPickle.load(fid)
     fid.close()
+    sum_time = 0
     if params.get("sum_after", False):
+        sum_tic = time.time()
         s = df.sum(numeric_only=True)
-    return df
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def run_npy(params):
     X = numpy.load(params["filename"])
+    sum_time = 0
     if params.get("sum_after", False):
+        sum_tic = time.time()
         s = X.sum()
-    return df
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def run_sframe(params):
     type_hints_json_fn = params.get("type_hints_json", None)
+    dtypes = {}
     if type_hints_json_fn is not None:
         type_hints = json.load(open(type_hints_json_fn))
-        dtypes = {}
         for key in type_hints.keys():
             dtypes["X" + str(int(key) + 1)] = eval("np." + type_hints[key])
     header = not params.get("no_header", False)
     df = sframe.SFrame.read_csv(params["filename"], header=header, column_type_hints=dtypes)
+    sum_time = 0
     if params.get("sum_after", False):
+        sum_tic = time.time()
         s = sum_sframe(df)
-    return df
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def run_hdf5(params):
     f = h5py.File(params["filename"])
     ds = f[params["dataset"]]
     X = ds[:, :]
+    sum_time = 0
     if params.get("sum_after", False):
+        sum_tic = time.time()
         s = X.sum()
-    return X
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def run_feather(params):
     df = feather.read_dataframe(params["filename"])
+    sum_time = 0
     if params.get("sum_after", False):
-        s = df.sum(numeric_only=True)
-    return df
+        sum_tic = time.time()
+        s = sum_dataframe(df)
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time}
 
 def generate_params(json_filename, args, types):
     """
@@ -165,45 +214,49 @@ def generate_params(json_filename, args, types):
     return params
 
 def main():
-    types = {"num_threads": int,
-             "block_size": int,
-             "allow_quoted_newlines": bool,
-             "type_hints_json": str,
-             "filename": str,
-             "log": str}
-    params = generate_params(sys.argv[1], sys.argv[2:], types)
+    bool_converter = lambda x: x in ["True", "true", True]
+    param_types = {"num_threads": int,
+                   "block_size": int,
+                   "allow_quoted_newlines": bool_converter,
+                   "type_hints_json": str,
+                   "no_header": bool_converter,
+                   "sum_after": bool_converter,
+                   "filename": str,
+                   "log": str}
+    params = generate_params(sys.argv[1], sys.argv[2:], param_types)
     cmd = params.get("cmd", "")
     tic = time.time()
     logfn = None
     if "log" in params:
         logfn = params["log"]
         params.pop("log")
+    results = {}
     if cmd == "feather":
-        retval = run_feather(params)
+        results = run_feather(params)
     elif cmd == "paratext":
-        retval = run_paratext(params)
+        results = run_paratext(params)
     elif cmd == "pandas":
-        retval = run_pandas(params)
+        results = run_pandas(params)
     elif cmd == "numpy":
-        retval = run_numpy(params)
+        results = run_numpy(params)
     elif cmd == "hdf5":
-        retval = run_hdf5(params)
+        results = run_hdf5(params)
     elif cmd == "npy":
-        retval = run_npy(params)
+        results = run_npy(params)
     elif cmd == "pickle":
-        retval = run_pickle(params)
+        results = run_pickle(params)
     elif cmd == "cPickle":
-        retval = run_cPickle(params)
+        results = run_cPickle(params)
     elif cmd == "sframe":
-        retval = run_sframe(params)
-    elif cmd == "memcopy":
-        retval = run_memcopy_baseline(params)
+        results = run_sframe(params)
+    elif cmd == "disk_to_mem":
+        results = run_disk_to_mem_baseline(params)
     elif cmd == "avgcols":
-        retval = run_average_columns_baseline(params)
+        results = run_average_columns_baseline(params)
     elif cmd == "countnl":
-        retval = run_count_newlines_baseline(params)
+        results = run_count_newlines_baseline(params)
     elif cmd == "noop":
-        retval = 0
+        results = {}
     else:
         print "Command not found: '%s'" % cmd
     toc = time.time()
@@ -212,6 +265,9 @@ def main():
     log_entry = params.copy()
     log_entry["runtime"] = runtime
     log_entry["mem"] = mem
+    # Copy run-specific results into the log-entry
+    for key in results.keys():
+        log_entry[key] = results[key]
     if "filename" in params:
         s = os.stat(params["filename"])
         sz = s.st_size
@@ -222,13 +278,16 @@ def main():
     if logfn is None:
         print log_entry
     else:
-        old_log = []
+        old_log = {"log": []}
         if os.path.isfile(logfn):
-            old_log = json.load(open(logfn, "r"))
-        old_log.append(log_entry)
-        log_fid = open(logfn, "a")
-        log_fid.write(json.dumps(old_log))
-    retval = None
+            old_log_fid = open(logfn, "r")
+            old_log = json.load(old_log_fid)
+            old_log_fid.close()
+        old_log["log"].append(log_entry)
+        log_fid = open(logfn, "w")
+        json.dump(old_log, log_fid)
+        log_fid.close()
+    results = None
 
 if __name__ == "__main__":
     main()

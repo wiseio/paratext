@@ -312,6 +312,12 @@ def baseline_average_columns(filename, *args, **kwargs):
     """
     Computes the sum of numeric columns in a numeric-only CSV file.
 
+    This is useful for computing a baseline for performance metrics.
+    It reads a file without any parsing, but the memory requirements
+    are fixed in the number of columns. Memory does not grow the larger
+    the file in the number of lines.
+
+
     Parameters
     ----------
     {0}
@@ -331,8 +337,9 @@ def baseline_average_columns(filename, *args, **kwargs):
 @_docstring_parameter(_csv_load_params_doc)
 def baseline_newline_count(filename, *args, **kwargs):
     """
-    Computes the number of newlines in the file. Note, this is not the same
-    as the number of lines in a file.
+    Computes the number of newline characters in the file.
+
+    Note: this is not the same as the number of lines in a file.
 
     Parameters
     ----------
@@ -349,12 +356,12 @@ def baseline_newline_count(filename, *args, **kwargs):
     return count
 
 @_docstring_parameter(_csv_load_params_doc)
-def baseline_memcopy(filename, *args, **kwargs):
+def baseline_disk_to_mem(filename, *args, **kwargs):
     """
-    Simply copies the contents of a file into a collection of buffers
-    and then deallocates them at the end. This shows the performance of
-    reading a file without any parsing but with memory requirements that
-    grow with the size of the file.
+    This function copies the contents of a file into a collection of buffers.
+    The buffers are then deallocated. This is useful for computing a baseline 
+    for performance metrics. It reads a file without any parsing, but the
+    memory requirements grow with the size of the file.
 
     Parameters
     ----------
