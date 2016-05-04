@@ -96,17 +96,23 @@ def run_numpy(params):
 def run_pickle(params):
     fid = open(params["filename"])
     df = pickle.load(fid)
+    fid.close()
     if params.get("sum_after", False):
         s = df.sum(numeric_only=True)
-    fid.close()
     return df
 
 def run_cPickle(params):
     fid = open(params["filename"])
     df = cPickle.load(fid)
+    fid.close()
     if params.get("sum_after", False):
         s = df.sum(numeric_only=True)
-    fid.close()
+    return df
+
+def run_npy(params):
+    X = numpy.load(params["filename"])
+    if params.get("sum_after", False):
+        s = X.sum()
     return df
 
 def run_sframe(params):
@@ -178,22 +184,22 @@ def main():
         retval = run_paratext(params)
     elif cmd == "pandas":
         retval = run_pandas(params)
+    elif cmd == "numpy":
+        retval = run_numpy(params)
     elif cmd == "hdf5":
         retval = run_hdf5(params)
+    elif cmd == "npy":
+        retval = run_npy(params)
+    elif cmd == "pickle":
+        retval = run_pickle(params)
+    elif cmd == "cPickle":
+        retval = run_cPickle(params)
+    elif cmd == "sframe":
+        retval = run_sframe(params)
     elif cmd == "memcopy":
         retval = run_memcopy_baseline(params)
     elif cmd == "avgcols":
         retval = run_average_columns_baseline(params)
-    elif cmd == "pandas":
-        retval = run_pandas(params)
-    elif cmd == "numpy":
-        retval = run_numpy(params)
-    elif cmd == "pickle":
-        retval = run_pickle(params)
-    elif cmd == "cPickle":
-        retval = run_pickle(params)
-    elif cmd == "sframe":
-        retval = run_sframe(params)
     elif cmd == "countnl":
         retval = run_count_newlines_baseline(params)
     elif cmd == "noop":
