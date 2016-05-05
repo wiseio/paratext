@@ -45,6 +45,16 @@ def sum_dictframe(d, levels):
             s[key] = d[key].sum()
     return s
 
+def sum_ndarray(X):
+    s = {}
+    rows, cols = X.shape
+    for col in xrange(0, cols):
+        if type(X[0, col]) in (str, unicode):
+            s[col] = pandas.Series(X[:,col]).apply(len).sum()
+        else:
+            s[col] = X[:,col].sum()
+    return s
+
 def dict_frame_to_data_frame(d, levels):
     column_names = d.keys()
     def dict_frame_to_data_frame_impl():
@@ -160,7 +170,7 @@ def run_numpy(params):
     sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
-        s = X.sum()
+        s = sum_ndarray(X)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
@@ -192,11 +202,11 @@ def run_cPickle(params):
     return {"sum_time": sum_time}
 
 def run_npy(params):
-    X = numpy.load(params["filename"])
+    X = np.load(params["filename"])
     sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
-        s = X.sum()
+        s = sum_ndarray(X)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
@@ -244,7 +254,7 @@ def run_hdf5(params):
     sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
-        s = X.sum()
+        s = sum_ndarray(X)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}

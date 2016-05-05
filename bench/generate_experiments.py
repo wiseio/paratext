@@ -64,6 +64,7 @@ for name, attr in datasets.iteritems():
                                   "disk_state": disk_state,
                                   "block_size": block_size,
                                   "to_df": True,
+                                  "sum_after": True,
                                   "log": str(len(all_params)) + ".log"}
                         mlnl = attr.get("max_level_name_length", None)
                         if mlnl:
@@ -76,6 +77,7 @@ for name, attr in datasets.iteritems():
                       "filename": "mnist8m.csv",
                       "no_header": True,
                       "to_df": True,
+                      "sum_after": True,
                       "type_hints_json": "mnist-hints.json",
                       "disk_state": disk_state}
             all_params.append(params)
@@ -86,6 +88,7 @@ for name, attr in datasets.iteritems():
                       "filename": "mnist8m.csv",
                       "no_header": True,
                       "to_df": True,
+                      "sum_after": True,
                       "disk_state": disk_state}
             all_params.append(params)
 
@@ -95,7 +98,7 @@ for name, attr in datasets.iteritems():
                       "filename": attr[cmd],
                       "dataset": "mydataset",
                       "no_header": True,
-
+                      "sum_after": True,
                       "disk_state": disk_state}
     all_params.append(params)
 
