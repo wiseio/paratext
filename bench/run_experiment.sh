@@ -1,7 +1,7 @@
 #!/bin/bash
 
-json_file="${1:}"
-num_trials="${2:1}"
+json_file="${1:-}"
+num_trials="${2:-1}"
 
 if [ "$json_file" == "" ];
 then
