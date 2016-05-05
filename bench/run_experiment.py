@@ -45,6 +45,17 @@ def sum_dictframe(d, levels):
             s[key] = d[key].sum()
     return s
 
+def dict_frame_to_data_frame(d, levels):
+    column_names = d.keys()
+    def dict_frame_to_data_frame_impl():
+        for name in column_names:
+            column = d.pop(name)
+            if name in levels:
+                column_levels = d.pop(name)
+                column = column_levels[column]
+            yield name, column
+    return pandas.DataFrame.from_items(dict_frame_to_data_frame_impl())
+
 def memory_usage_resource():
     "This function is from Fabian Pedregosa's blog post on measuring python memory usage... http://bit.ly/26RguwI"
     import resource
@@ -59,15 +70,25 @@ def run_disk_to_mem_baseline(params):
     return {}
 
 def run_average_columns_baseline(params):
-    avg = paratext.baseline_average_columns(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False), allow_quoted_newlines=params.get("allow_quoted_newlines", False))
+    avg = paratext.baseline_average_columns(params["filename"],
+                                            block_size=params.get("block_size", 1048576),
+                                            num_threads=params.get("num_threads", 1),
+                                            no_header=params.get("no_header", False),
+                                            allow_quoted_newlines=params.get("allow_quoted_newlines", False))
     return {}
 
 def run_paratext(params):
     load_tic = time.time()
-    loader = paratext.internal_create_csv_loader(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False), allow_quoted_newlines=params.get("allow_quoted_newlines", False), max_level_name_length=params.get("max_level_name_length", None))
+    loader = paratext.internal_create_csv_loader(params["filename"],
+                                                 block_size=params.get("block_size", 1048576),
+                                                 num_threads=params.get("num_threads", 1),
+                                                 no_header=params.get("no_header", False),
+                                                 allow_quoted_newlines=params.get("allow_quoted_newlines", False),
+                                                 max_level_name_length=params.get("max_level_name_length", None))
     load_toc = time.time()
     load_time = load_toc - load_tic
     transfer_tic = time.time()
+    pretransfer_mem = memory_usage_resource()
     transfer = paratext.internal_csv_loader_transfer(loader, forget=True)
     d = {}
     levels = {}
@@ -75,15 +96,30 @@ def run_paratext(params):
         if semantics == 'cat':
             levels[name] = clevels
         d[name] = col
+    posttransfer_mem = memory_usage_resource()
+    transfer = None
     transfer_toc = time.time()
     transfer_time = transfer_toc - transfer_tic
-    sum_time = 0
     if params.get("sum_after", False):
         sum_tic = time.time()
         s = sum_dictframe(d, levels)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
-    return {"sum_time": sum_time, "load_time": load_time, "transfer_time": transfer_time}
+    to_df_time = '?'
+    if params.get("to_df", False):
+        to_df_tic = time.time()
+        df = dict_frame_to_data_frame(d, levels)
+        to_df_toc = time.time()
+        to_df_time = to_df_toc - to_df_tic
+    sum_time = '?'
+    to_df_mem = memory_usage_resource()
+    return {"sum_time": sum_time,
+            "load_time": load_time,
+            "transfer_time": transfer_time,
+            "pretransfer_mem": pretransfer_mem,
+            "posttransfer_mem": posttransfer_mem,
+            "to_df_mem": to_df_mem,
+            "to_df_time": to_df_time}
 
 def run_count_newlines_baseline(params):
     count = paratext.baseline_newline_count(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False))
@@ -103,10 +139,10 @@ def run_pandas(params): #filename, type_hints_json=None, no_header=False):
         df = pandas.read_csv(params["filename"], dtype=dtypes, header=header)
     else:
         df = pandas.read_csv(params["filename"], header=header)
-    sum_time = 0
+    sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
-        s = df.sum(numeric_only=True)
+        s = sum_dataframe(df)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
@@ -121,7 +157,7 @@ def run_numpy(params):
     else:
         dtype = float
     X = np.loadtxt(params["filename"], dtype=dtype, skiprows=skiprows, delimiter=',')
-    sum_time = 0
+    sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
         s = X.sum()
@@ -133,12 +169,12 @@ def run_pickle(params):
     fid = open(params["filename"])
     df = pickle.load(fid)
     fid.close()
-    sum_time = 0
+    sum_time = '?'
     sum_after = params.get("sum_after", False)
     if sum_after:
         print ">>>", sum_after, type(sum_after)
         sum_tic = time.time()
-        s = df.sum(numeric_only=True)
+        s = sum_dataframe(df)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
@@ -147,17 +183,17 @@ def run_cPickle(params):
     fid = open(params["filename"])
     df = cPickle.load(fid)
     fid.close()
-    sum_time = 0
+    sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
-        s = df.sum(numeric_only=True)
+        s = sum_dataframe(df)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
 def run_npy(params):
     X = numpy.load(params["filename"])
-    sum_time = 0
+    sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
         s = X.sum()
@@ -172,21 +208,36 @@ def run_sframe(params):
         type_hints = json.load(open(type_hints_json_fn))
         for key in type_hints.keys():
             dtypes["X" + str(int(key) + 1)] = eval("np." + type_hints[key])
+    load_tic = time.time()
     header = not params.get("no_header", False)
-    df = sframe.SFrame.read_csv(params["filename"], header=header, column_type_hints=dtypes)
-    sum_time = 0
+    sf = sframe.SFrame.read_csv(params["filename"], header=header, column_type_hints=dtypes)
+    load_toc = time.time()
+    load_time = load_toc - load_tic
+    sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
-        s = sum_sframe(df)
+        s = sum_sframe(sf)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
-    return {"sum_time": sum_time}
+    pretransfer_mem = memory_usage_resource()
+    transfer_time = '?'
+    if params.get("to_df", False):
+        transfer_tic = time.time();
+        df = sf.to_dataframe()
+        transfer_toc = time.time();
+        transfer_time = transfer_toc - transfer_tic
+    posttransfer_mem = memory_usage_resource()
+    return {"sum_time": sum_time,
+            "load_time": load_time,
+            "pretransfer_mem": pretransfer_mem,
+            "posttransfer_mem": posttransfer_mem,
+            "transfer_time": transfer_time}
 
 def run_hdf5(params):
     f = h5py.File(params["filename"])
     ds = f[params["dataset"]]
     X = ds[:, :]
-    sum_time = 0
+    sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
         s = X.sum()
@@ -196,7 +247,7 @@ def run_hdf5(params):
 
 def run_feather(params):
     df = feather.read_dataframe(params["filename"])
-    sum_time = 0
+    sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
         s = sum_dataframe(df)
@@ -234,6 +285,7 @@ def main():
                    "type_hints_json": str,
                    "no_header": bool_converter,
                    "sum_after": bool_converter,
+                   "to_df": bool_converter,
                    "filename": str,
                    "log": str}
     params = generate_params(sys.argv[1], sys.argv[2:], param_types)
