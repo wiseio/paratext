@@ -63,14 +63,27 @@ def run_average_columns_baseline(params):
     return {}
 
 def run_paratext(params):
-    d, levels = paratext.load_csv_to_dict(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False), allow_quoted_newlines=params.get("allow_quoted_newlines", False), max_level_name_length=params.get("max_level_name_length", None))
+    load_tic = time.time()
+    loader = paratext.internal_create_csv_loader(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False), allow_quoted_newlines=params.get("allow_quoted_newlines", False), max_level_name_length=params.get("max_level_name_length", None))
+    load_toc = time.time()
+    load_time = load_toc - load_tic
+    transfer_tic = time.time()
+    transfer = paratext.internal_csv_loader_transfer(loader, forget=True)
+    d = {}
+    levels = {}
+    for name, col, semantics, clevels in transfer:
+        if semantics == 'cat':
+            levels[name] = clevels
+        d[name] = col
+    transfer_toc = time.time()
+    transfer_time = transfer_toc - transfer_tic
     sum_time = 0
     if params.get("sum_after", False):
         sum_tic = time.time()
         s = sum_dictframe(d, levels)
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
-    return {"sum_time": sum_time}
+    return {"sum_time": sum_time, "load_time": load_time, "transfer_time": transfer_time}
 
 def run_count_newlines_baseline(params):
     count = paratext.baseline_newline_count(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False))

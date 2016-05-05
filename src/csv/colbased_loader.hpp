@@ -342,7 +342,7 @@ namespace ParaText {
           for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
             column_chunks_[worker_id][column_index]->convert_to_cat_or_text();
             any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
-            }
+          }
           /* If any became text or there were text chunks, convert all chunks for the
              column to raw text. */
           if (any_text_[column_index]) {
