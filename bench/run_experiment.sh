@@ -17,11 +17,11 @@ then
     cat $json_file
     # First do a cold run and throw away the log.
     free && sync && echo 3 > /proc/sys/vm/drop_caches && free
-    python ./run_experiment.py "$json_file" log="/dev/null"
+    run_experiment.py "$json_file" log="/dev/null"
 
     # Now do x trials
     for trials in $(seq 1 $num_trials); do
-        python ./run_experiment.py "$json_file"
+        run_experiment.py "$json_file"
     done
 else
     echo cold: $json_file
@@ -29,6 +29,6 @@ else
     for trials in $(seq 1 $num_trials); do
         free && sync && echo 3 > /proc/sys/vm/drop_caches && free
         sleep 1
-        python ./run_experiment.py "$json_file"
+        run_experiment.py "$json_file"
     done
 fi

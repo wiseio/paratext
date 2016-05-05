@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 import paratext
 import pickle
 import feather
