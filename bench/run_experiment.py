@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Import standard library modules needed for the benchmarks.
 import sys
 import os
