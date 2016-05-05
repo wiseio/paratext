@@ -11,6 +11,7 @@ datasets = {"mnist":
              "pickle": "mnist.pkl",
              "cPickle": "mnist.pkl",
              "hints": "mnist-hints.json",
+             "no_header": True,
              "number_only": True },
             "mnist8m":
             {"csv": "mnist8m.csv",
@@ -20,18 +21,21 @@ datasets = {"mnist":
              "pickle": "mnist8m.pkl",
              "cPickle": "mnist8m.pkl",
              "hints": "mnist-hints.json",
+             "no_header": True,
              "number_only": True},
             "messy":
             {"csv": "messy.csv",
              "feather": "messy.feather",
              "pickle": "messy.pkl",
              "qnl": True,
+             "no_header": False,
              "max_level_name_length": 0},
             "messy2":
             {"csv": "messy2.csv",
              "feather": "messy2.feather",
              "pickle": "messy2.pkl",
              "qnl": True,
+             "no_header": False,
              "max_level_name_length": 0},
             "car":
             {"csv": "car.csv",
@@ -44,6 +48,7 @@ datasets = {"mnist":
              "feather": "floats.feather",
              "hdf5": "floats.hdf5",
              "npy": "floats.npy",
+             "no_header": False,
              "pickle": "floats.pkl"}}
 
 for name, attr in datasets.iteritems():
@@ -75,7 +80,7 @@ for name, attr in datasets.iteritems():
         for cmd in ["sframe", "pandas", "numpy"]:
             params = {"cmd": cmd,
                       "filename": "mnist8m.csv",
-                      "no_header": True,
+                      "no_header": attr.get("no_header", True),
                       "to_df": True,
                       "sum_after": True,
                       "type_hints_json": "mnist-hints.json",
@@ -86,7 +91,7 @@ for name, attr in datasets.iteritems():
         for cmd in ["sframe", "pandas"]:
             params = {"cmd": cmd,
                       "filename": "mnist8m.csv",
-                      "no_header": True,
+                      "no_header": attr.get("no_header", True),
                       "to_df": True,
                       "sum_after": True,
                       "disk_state": disk_state}
@@ -97,7 +102,6 @@ for name, attr in datasets.iteritems():
             params = {"cmd": cmd,
                       "filename": attr[cmd],
                       "dataset": "mydataset",
-                      "no_header": True,
                       "sum_after": True,
                       "disk_state": disk_state}
     all_params.append(params)
