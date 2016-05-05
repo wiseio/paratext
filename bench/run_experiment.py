@@ -100,6 +100,7 @@ def run_paratext(params):
     transfer = None
     transfer_toc = time.time()
     transfer_time = transfer_toc - transfer_tic
+    sum_time = '?'
     if params.get("sum_after", False):
         sum_tic = time.time()
         s = sum_dictframe(d, levels)
@@ -111,7 +112,6 @@ def run_paratext(params):
         df = dict_frame_to_data_frame(d, levels)
         to_df_toc = time.time()
         to_df_time = to_df_toc - to_df_tic
-    sum_time = '?'
     to_df_mem = memory_usage_resource()
     return {"sum_time": sum_time,
             "load_time": load_time,
@@ -220,18 +220,22 @@ def run_sframe(params):
         sum_toc = time.time()
         sum_time = sum_toc - sum_tic
     pretransfer_mem = memory_usage_resource()
+    posttransfer_mem = '?'
+    to_df_mem = '?'
     transfer_time = '?'
     if params.get("to_df", False):
         transfer_tic = time.time();
         df = sf.to_dataframe()
         transfer_toc = time.time();
         transfer_time = transfer_toc - transfer_tic
-    posttransfer_mem = memory_usage_resource()
+        to_df_mem = memory_usage_resource()
+        posttransfer_mem = memory_usage_resource()
     return {"sum_time": sum_time,
             "load_time": load_time,
             "pretransfer_mem": pretransfer_mem,
             "posttransfer_mem": posttransfer_mem,
-            "transfer_time": transfer_time}
+            "transfer_time": transfer_time,
+            "to_df_mem": to_df_mem}
 
 def run_hdf5(params):
     f = h5py.File(params["filename"])
