@@ -332,7 +332,7 @@ def main():
         results = run_cPickle(params)
     elif cmd == "sframe":
         results = run_sframe(params)
-    elif cmd == "disk_to_mem":
+    elif cmd == "disk-to-mem":
         results = run_disk_to_mem_baseline(params)
     elif cmd == "avgcols":
         results = run_average_columns_baseline(params)
