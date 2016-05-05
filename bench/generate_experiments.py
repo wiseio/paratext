@@ -69,12 +69,23 @@ for name, attr in datasets.iteritems():
                         if mlnl:
                             params["max_level_name_length"] = mlnl
                         all_params.append(params)
+
+        # pandas and sframes with type hints
         for cmd in ["sframe", "pandas", "numpy"]:
             params = {"cmd": cmd,
                       "filename": "mnist8m.csv",
                       "no_header": True,
                       "to_df": True,
                       "type_hints_json": "mnist-hints.json",
+                      "disk_state": disk_state}
+            all_params.append(params)
+
+        # pandas and sframes without type hints
+        for cmd in ["sframe", "pandas"]:
+            params = {"cmd": cmd,
+                      "filename": "mnist8m.csv",
+                      "no_header": True,
+                      "to_df": True,
                       "disk_state": disk_state}
             all_params.append(params)
 
