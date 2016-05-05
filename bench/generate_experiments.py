@@ -81,7 +81,7 @@ for name, attr in datasets.iteritems():
         # pandas and sframes with type hints
         for cmd in ["sframe", "pandas", "numpy"]:
             params = {"cmd": cmd,
-                      "filename": "mnist8m.csv",
+                      "filename": attr["csv"],
                       "no_header": attr.get("no_header", True),
                       "to_df": True,
                       "sum_after": True,
@@ -92,7 +92,7 @@ for name, attr in datasets.iteritems():
         # pandas and sframes without type hints
         for cmd in ["sframe", "pandas"]:
             params = {"cmd": cmd,
-                      "filename": "mnist8m.csv",
+                      "filename": attr["csv"],
                       "no_header": attr.get("no_header", True),
                       "to_df": True,
                       "sum_after": True,
@@ -103,9 +103,10 @@ for name, attr in datasets.iteritems():
         if cmd in attr:
             params = {"cmd": cmd,
                       "filename": attr[cmd],
-                      "dataset": "mydataset",
                       "sum_after": True,
                       "disk_state": disk_state}
+            if cmd == "hdf5":
+                params["dataset"] = "mydataset"
     all_params.append(params)
 
 params = {"cmd": "noop"}
