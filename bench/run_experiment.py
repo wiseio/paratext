@@ -17,6 +17,7 @@ import pickle
 import cPickle
 import sframe
 
+
 def sum_sframe(df):
     s = {}
     for key in df.column_names():
@@ -29,8 +30,11 @@ def sum_sframe(df):
 def sum_dataframe(df):
     s = {}
     for key in df.keys():
-        if df[key].dtype in (str, unicode, np.object):
-            s[key] = df[key].apply(lambda x: len(x)).sum()
+        if df[key].dtype in (str, unicode, object):
+            try:
+                s[key] = df[key].apply(lambda x: len(x)).sum()
+            except:
+                s[key] = df[key].sum()
         else:
             s[key] = df[key].sum()
     return s
@@ -63,7 +67,7 @@ def dict_frame_to_data_frame(d, levels):
         for name in column_names:
             column = d.pop(name)
             if name in levels:
-                column_levels = d.pop(name)
+                column_levels = levels.pop(name)
                 column = column_levels[column]
             yield name, column
     return pandas.DataFrame.from_items(dict_frame_to_data_frame_impl())

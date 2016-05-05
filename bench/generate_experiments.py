@@ -14,7 +14,8 @@ datasets = {"mnist":
              "cPickle": "mnist.pkl",
              "hints": "mnist-hints.json",
              "no_header": True,
-             "number_only": True },
+             "number_only": True
+             "to_df": True},
             "mnist8m":
             {"csv": "mnist8m.csv",
              "hdf5": "mnist8m.hdf5",
@@ -24,34 +25,39 @@ datasets = {"mnist":
              "cPickle": "mnist8m.pkl",
              "hints": "mnist-hints.json",
              "no_header": True,
-             "number_only": True},
+             "number_only": True,
+             "to_df": True},
             "messy":
             {"csv": "messy.csv",
              "feather": "messy.feather",
              "pickle": "messy.pkl",
              "qnl": True,
              "no_header": False,
-             "max_level_name_length": 0},
+             "max_level_name_length": 0,
+             "to_df": True},
             "messy2":
             {"csv": "messy2.csv",
              "feather": "messy2.feather",
              "pickle": "messy2.pkl",
              "qnl": True,
              "no_header": False,
-             "max_level_name_length": 0},
+             "max_level_name_length": 0,
+             "to_df": True},
             "car":
             {"csv": "car.csv",
              "feather": "car.feather",
              "pickle": "car.pkl",
              "qnl": False,
-             "no_header": False},
+             "no_header": False,
+             "to_df": True},
             "floats":
             {"csv": "floats.csv",
              "feather": "floats.feather",
              "hdf5": "floats.hdf5",
              "npy": "floats.npy",
              "no_header": False,
-             "pickle": "floats.pkl"}}
+             "pickle": "floats.pkl",
+             "to_df": True}}
 
 for name, attr in datasets.iteritems():
     if "csv" in attr:
