@@ -16,7 +16,8 @@ then
     echo warm: $json_file
     cat $json_file
     # First do a cold run and throw away the log.
-    free && sync && echo 3 > /proc/sys/vm/drop_caches && free
+    sudo bash -c "sync || sync || sync || sync"
+    sudo bash -c "echo 3 > /proc/sys/vm/drop_caches"
     run_experiment.py "$json_file" log="/dev/null"
 
     # Now do x trials
@@ -27,7 +28,10 @@ else
     echo cold: $json_file
     cat $json_file
     for trials in $(seq 1 $num_trials); do
-        free && sync && echo 3 > /proc/sys/vm/drop_caches && free
+        free
+        sudo bash -c "sync || sync || sync || sync"
+        sudo bash -c "echo 3 > /proc/sys/vm/drop_caches"
+        free
         sleep 1
         run_experiment.py "$json_file"
     done
