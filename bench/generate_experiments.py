@@ -26,7 +26,7 @@ datasets = {"mnist":
              "hints": "mnist-hints.json",
              "no_header": True,
              "number_only": True,
-             "to_df": True},
+             "to_df": False},
             "messy":
             {"csv": "messy.csv",
              "feather": "messy.feather",
@@ -89,7 +89,7 @@ for name, attr in datasets.iteritems():
             params = {"cmd": cmd,
                       "filename": attr["csv"],
                       "no_header": attr.get("no_header", True),
-                      "to_df": True,
+                      "to_df": attr.get("to_df", False),
                       "sum_after": True,
                       "type_hints_json": "mnist-hints.json",
                       "disk_state": disk_state}
@@ -100,7 +100,7 @@ for name, attr in datasets.iteritems():
             params = {"cmd": cmd,
                       "filename": attr["csv"],
                       "no_header": attr.get("no_header", True),
-                      "to_df": True,
+                      "to_df": attr.get("to_df", False),
                       "sum_after": True,
                       "disk_state": disk_state}
             all_params.append(params)
