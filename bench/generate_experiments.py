@@ -127,6 +127,16 @@ for name, attr in datasets.iteritems():
                     params["dataset"] = "mydataset"
                 all_params.append(params)
 
+for cmd in ["sframe", "paratext", "pyspark"]:
+    params = {"cmd": cmd,
+              "filename": "mnist8m.csv",
+              "no_header": True
+              "to_df": True
+              "sum_after": True,
+              "type_hints_json": "mnist-hints.json",
+              "disk_state": disk_state}
+    all_params.append(params)
+
 params = {"cmd": "noop"}
 all_params.append(params)
 

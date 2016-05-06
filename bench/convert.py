@@ -31,7 +31,7 @@ output_filenames = sys.argv[2:]
 
 if not input_filename.endswith(".csv"):
     print "input must be a CSV file (by extension)"
-    os.exit(1)
+    sys.exit(1)
 
 df = paratext.load_csv_to_pandas(input_filename, allow_quoted_newlines=True)
 

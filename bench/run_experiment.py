@@ -11,7 +11,12 @@
 #
 #  python run_experiment.py - cmd=noop log_dir=/tmp/mylogs
 #
-# The "-" signifies to read no json file.
+# The "-" signifies to not read a json parameters file. The
+# command line arguments override json parameters or environment
+# variables.
+#
+#  python run_experiment.py exp.json cmd=noop log_dir=/tmp/mylogs
+#
 
 # Import standard library modules needed for the benchmarks.
 import sys
@@ -48,9 +53,14 @@ def sum_dataframe(df):
             try:
                 s[key] = df[key].apply(lambda x: len(x)).sum()
             except:
-                s[key] = df[key].sum()
+                # Too slow
+                #s[key] = df[key].sum()
+                s[key] = df[key].values.sum()
         else:
-            s[key] = df[key].sum()
+            # Too slow
+            #s[key] = df[key].sum()
+            # Faster
+            s[key] = df[key].values.sum()
     return s
 
 def sum_dictframe(d, levels):
@@ -129,11 +139,11 @@ def memory_usage_psutil(process_name):
         mem += pmem
     return mem
 
-def run_disk_to_mem_baseline(params):
+def bench_disk_to_mem_baseline(params):
     d = paratext.baseline_disk_to_mem(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1))
     return {}
 
-def run_average_columns_baseline(params):
+def bench_average_columns_baseline(params):
     avg = paratext.baseline_average_columns(params["filename"],
                                             block_size=params.get("block_size", 1048576),
                                             num_threads=params.get("num_threads", 1),
@@ -141,7 +151,7 @@ def run_average_columns_baseline(params):
                                             allow_quoted_newlines=params.get("allow_quoted_newlines", False))
     return {}
 
-def run_paratext(params):
+def bench_paratext(params):
     load_tic = time.time()
     loader = paratext.internal_create_csv_loader(params["filename"],
                                                  block_size=params.get("block_size", 1048576),
@@ -185,11 +195,11 @@ def run_paratext(params):
             "to_df_mem": to_df_mem,
             "to_df_time": to_df_time}
 
-def run_count_newlines_baseline(params):
+def bench_count_newlines_baseline(params):
     count = paratext.baseline_newline_count(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False))
     return {}
 
-def run_pandas(params): #filename, type_hints_json=None, no_header=False):
+def bench_pandas(params): #filename, type_hints_json=None, no_header=False):
     if params["no_header"]:
         header = None
     else:
@@ -211,7 +221,7 @@ def run_pandas(params): #filename, type_hints_json=None, no_header=False):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def run_numpy(params):
+def bench_numpy(params):
     if params.get("no_header", False):
         skiprows = 0
     else:
@@ -229,7 +239,7 @@ def run_numpy(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def run_pickle(params):
+def bench_pickle(params):
     fid = open(params["filename"])
     df = pickle.load(fid)
     fid.close()
@@ -243,7 +253,7 @@ def run_pickle(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def run_cPickle(params):
+def bench_cPickle(params):
     fid = open(params["filename"])
     df = cPickle.load(fid)
     fid.close()
@@ -255,7 +265,7 @@ def run_cPickle(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def run_npy(params):
+def bench_npy(params):
     X = np.load(params["filename"])
     sum_time = '?'
     if params.get("sum_after", False):
@@ -265,7 +275,7 @@ def run_npy(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def run_sframe(params):
+def bench_sframe(params):
     type_hints_json_fn = params.get("type_hints_json", None)
     dtypes = {}
     if type_hints_json_fn is not None:
@@ -301,7 +311,7 @@ def run_sframe(params):
             "transfer_time": transfer_time,
             "to_df_mem": to_df_mem}
 
-def run_hdf5(params):
+def bench_hdf5(params):
     f = h5py.File(params["filename"])
     ds = f[params["dataset"]]
     X = ds[:, :]
@@ -313,7 +323,7 @@ def run_hdf5(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def run_feather(params):
+def bench_feather(params):
     df = feather.read_dataframe(params["filename"])
     sum_time = '?'
     if params.get("sum_after", False):
@@ -323,7 +333,7 @@ def run_feather(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def run_spark(params):
+def bench_spark(params):
     from pyspark import SparkContext
     from pyspark.sql import SQLContext
     sc = SparkContext("local", "App Name", pyFiles=[])
@@ -365,10 +375,9 @@ def run_spark(params):
 
 def generate_params(json_filename, args, types):
     """
-    Generate a parameters dict from the JSON and potentially command
-    line args that were passed as key=value args.
-
-       ./run_experiment.py - cmd=pandas filename=my.csv
+    Generate a parameters dict from the JSON. Command
+    line args that were passed in key=value format override
+    the fields of the JSON params passed.
     """
     if json_filename == "-":
         params = {}
@@ -408,36 +417,36 @@ def main():
         log_fn = os.path.join(log_path, log_fn)
     results = {}
     if cmd == "feather":
-        results = run_feather(params)
+        results = bench_feather(params)
     elif cmd == "paratext":
-        results = run_paratext(params)
+        results = bench_paratext(params)
     elif cmd == "pandas":
-        results = run_pandas(params)
+        results = bench_pandas(params)
     elif cmd == "numpy":
-        results = run_numpy(params)
+        results = bench_numpy(params)
     elif cmd == "hdf5":
-        results = run_hdf5(params)
+        results = bench_hdf5(params)
     elif cmd == "npy":
-        results = run_npy(params)
+        results = bench_npy(params)
     elif cmd == "pickle":
-        results = run_pickle(params)
+        results = bench_pickle(params)
     elif cmd == "pyspark":
-        results = run_pyspark(params)
+        results = bench_pyspark(params)
     elif cmd == "cPickle":
-        results = run_cPickle(params)
+        results = bench_cPickle(params)
     elif cmd == "sframe":
-        results = run_sframe(params)
+        results = bench_sframe(params)
     elif cmd == "disk-to-mem":
-        results = run_disk_to_mem_baseline(params)
+        results = bench_disk_to_mem_baseline(params)
     elif cmd == "avgcols":
-        results = run_average_columns_baseline(params)
+        results = bench_average_columns_baseline(params)
     elif cmd == "countnl":
-        results = run_count_newlines_baseline(params)
+        results = bench_count_newlines_baseline(params)
     elif cmd == "noop":
         results = {}
     else:
         print "Command not found: '%s'" % cmd
-        os.exit(1)
+        sys.exit(1)
     toc = time.time()
     runtime=toc-tic
     if cmd == "spark":
