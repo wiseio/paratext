@@ -34,6 +34,7 @@ datasets = {"mnist":
              "pickle": "messy.pkl",
              "qnl": True,
              "no_header": False,
+             "run_pyspark": False,
              "max_level_name_length": 0,
              "to_df": True},
             "messy2":
@@ -42,6 +43,7 @@ datasets = {"mnist":
              "pickle": "messy2.pkl",
              "qnl": True,
              "no_header": False,
+             "run_pyspark": False,
              "max_level_name_length": 0,
              "to_df": True},
             "car":
@@ -95,6 +97,15 @@ for name, attr in datasets.iteritems():
                       "type_hints_json": "mnist-hints.json",
                       "disk_state": disk_state}
             all_params.append(params)
+
+        if attr.get("run_pyspark", True):
+            params = {"cmd": "pyspark",
+                      "filename": attr["csv"],
+                      "no_header": attr.get("no_header", True),
+                      "to_df": attr.get("to_df", False),
+                      "sum_after": True,
+                      "disk_state": disk_state}
+        all_params.append(params)
 
         # pandas and sframes without type hints
         for cmd in ["sframe", "pandas"]:

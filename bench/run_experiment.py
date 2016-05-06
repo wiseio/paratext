@@ -1,5 +1,18 @@
 #!/usr/bin/env python
 
+# This script runs a benchmarking experiment on a CSV or
+# other data reader (HDF5, feather, npy, pkl).
+#
+# Benchmark parameters are specified with a JSON file or command
+# line arguments
+#
+# For example, to benchmark importing required libraries and then
+# doing nothing, do::
+#
+#  python run_experiment.py - cmd=noop log_dir=/tmp/mylogs
+#
+# The "-" signifies to read no json file.
+
 # Import standard library modules needed for the benchmarks.
 import sys
 import os
@@ -16,6 +29,7 @@ import numpy as np
 import pickle
 import cPickle
 import sframe
+from subprocess import check_output
 
 
 def sum_sframe(df):
@@ -61,6 +75,24 @@ def sum_ndarray(X):
             s[col] = X[:,col].sum()
     return s
 
+def sum_spark_dataframe(df):
+    from pyspark.sql import functions as F
+    str_columns = [field.name for field in df.schema.fields if str(field.dataType)=="StringType"]
+    num_columns = [field.name for field in df.schema.fields if str(field.dataType)!="StringType"]
+    str_length_sums = [F.sum(F.length(df[k])) for k in str_columns]
+    num_sums = [F.sum(df[k]) for k in num_columns]
+    sums = str_length_sums + num_sums
+    s = df.agg(*sums).collect()
+    return s
+
+def read_spark_csv(sc, sqlContext, filename, no_header=False):
+    if no_header:
+        header = "false"
+    else:
+        header = "true"
+    sdf = sqlContext.read.format('com.databricks.spark.csv').option('header', header).option('inferschema', 'true').load(filename)
+    return sdf
+
 def dict_frame_to_data_frame(d, levels):
     column_names = d.keys()
     def dict_frame_to_data_frame_impl():
@@ -79,6 +111,22 @@ def memory_usage_resource():
     if sys.platform == 'darwin':
         rusage_denom = rusage_denom * rusage_denom
     mem = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / rusage_denom
+    return mem
+
+def get_pids(process_name):
+    "Return the pids of a given process name."
+    return [int(x) for x in check_output(["pidof", process_name]).strip().split(" ")]
+
+def memory_usage_psutil(process_name):
+    "This function is adapted from Fabian Pedregosa's blog post on measuring python memory usage... http://bit.ly/26RguwI"
+    # return the memory usage in MB
+    import psutil
+    mem = 0
+    pids = get_pids(process_name)
+    for pid in pids:
+        process = psutil.Process(pid)
+        pmem = process.get_memory_info()[0] / float(2 ** 20)
+        mem += pmem
     return mem
 
 def run_disk_to_mem_baseline(params):
@@ -275,6 +323,46 @@ def run_feather(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
+def run_spark(params):
+    from pyspark import SparkContext
+    from pyspark.sql import SQLContext
+    sc = SparkContext("local", "App Name", pyFiles=[])
+    sqlContext = SQLContext(sc)
+    preload_java_mem = memory_usage_psutil("java")
+    preload_mem = memory_usage_resource() + memory_usage_psutil("java")
+    load_tic = time.time()
+    sdf = read_spark_csv(sc, sqlContext, params["filename"], params.get("no_header", False))
+    load_toc = time.time()
+    load_time = load_toc - load_tic
+    sum_time = '?'
+    if params.get("sum_after", False):
+        sum_tic = time.time()
+        s = sum_spark_dataframe(sdf)
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    transfer_time = '?'
+    pretransfer_mem = '?'
+    posttransfer_mem = '?'
+    to_df_mem = '?'
+    if params.get("to_df", False):
+        pretransfer_mem = memory_usage_resource() + memory_usage_psutil("java")
+        transfer_tic = time.time();
+        to_df_tic = time.time()
+        df = sdf.toPandas()
+        to_df_toc = time.time()
+        transfer_toc = time.time();
+        transfer_time = transfer_toc - transfer_tic
+        to_df_time = to_df_toc - to_df_tic
+        to_df_mem = memory_usage_resource() + memory_usage_psutil("java")
+        posttransfer_mem = to_df_mem
+    return {"sum_time": sum_time, 
+            "load_time": load_time,
+            "preload_java_mem": preload_java_mem,
+            "pretransfer_mem": pretransfer_mem,
+            "posttransfer_mem": posttransfer_mem,
+            "transfer_time": transfer_time,
+            "to_df_mem": to_df_mem}
+
 def generate_params(json_filename, args, types):
     """
     Generate a parameters dict from the JSON and potentially command
@@ -333,6 +421,8 @@ def main():
         results = run_npy(params)
     elif cmd == "pickle":
         results = run_pickle(params)
+    elif cmd == "pyspark":
+        results = run_pyspark(params)
     elif cmd == "cPickle":
         results = run_cPickle(params)
     elif cmd == "sframe":
@@ -347,9 +437,13 @@ def main():
         results = {}
     else:
         print "Command not found: '%s'" % cmd
+        os.exit(1)
     toc = time.time()
     runtime=toc-tic
-    mem=memory_usage_resource()
+    if cmd == "spark":
+        mem=memory_usage_resource() + memory_usage_psutil("java")
+    else:
+        mem=memory_usage_resource()
     log_entry = params.copy()
     log_entry["runtime"] = runtime
     log_entry["mem"] = mem
@@ -359,10 +453,10 @@ def main():
     if "filename" in params:
         s = os.stat(params["filename"])
         sz = s.st_size
-        log_entry["filesize"] = sz
-        log_entry["tput_bytes"] = sz / runtime
-        log_entry["tput_MB"] = (sz/1000000) / runtime
-        log_entry["tput_MiB"] = (sz/1048576) / runtime
+        log_entry["filesize"] = float(sz)
+        log_entry["tput_bytes"] = float(sz) / runtime
+        log_entry["tput_MB"] = (float(sz)/1000000) / runtime
+        log_entry["tput_MiB"] = (float(sz)/1048576) / runtime
     if log_fn is None:
         print log_entry
     else:
