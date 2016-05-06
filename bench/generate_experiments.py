@@ -86,46 +86,46 @@ for name, attr in datasets.iteritems():
                         if mlnl:
                             params["max_level_name_length"] = mlnl
                         all_params.append(params)
+        for disk_state in ["cold", "warm"]:
+            # pandas and sframes with type hints
+            for cmd in ["sframe", "pandas", "numpy"]:
+                params = {"cmd": cmd,
+                          "filename": attr["csv"],
+                          "no_header": attr.get("no_header", True),
+                          "to_df": attr.get("to_df", False),
+                          "sum_after": True,
+                          "type_hints_json": "mnist-hints.json",
+                          "disk_state": disk_state}
+                all_params.append(params)
 
-        # pandas and sframes with type hints
-        for cmd in ["sframe", "pandas", "numpy"]:
-            params = {"cmd": cmd,
-                      "filename": attr["csv"],
-                      "no_header": attr.get("no_header", True),
-                      "to_df": attr.get("to_df", False),
-                      "sum_after": True,
-                      "type_hints_json": "mnist-hints.json",
-                      "disk_state": disk_state}
-            all_params.append(params)
+            if attr.get("run_pyspark", True):
+                params = {"cmd": "pyspark",
+                          "filename": attr["csv"],
+                          "no_header": attr.get("no_header", True),
+                          "to_df": attr.get("to_df", False),
+                          "sum_after": True,
+                          "disk_state": disk_state}
+                all_params.append(params)
 
-        if attr.get("run_pyspark", True):
-            params = {"cmd": "pyspark",
-                      "filename": attr["csv"],
-                      "no_header": attr.get("no_header", True),
-                      "to_df": attr.get("to_df", False),
-                      "sum_after": True,
-                      "disk_state": disk_state}
-        all_params.append(params)
+            # pandas and sframes without type hints
+            for cmd in ["sframe", "pandas"]:
+                params = {"cmd": cmd,
+                          "filename": attr["csv"],
+                          "no_header": attr.get("no_header", True),
+                          "to_df": attr.get("to_df", False),
+                          "sum_after": True,
+                          "disk_state": disk_state}
+                all_params.append(params)
 
-        # pandas and sframes without type hints
-        for cmd in ["sframe", "pandas"]:
-            params = {"cmd": cmd,
-                      "filename": attr["csv"],
-                      "no_header": attr.get("no_header", True),
-                      "to_df": attr.get("to_df", False),
-                      "sum_after": True,
-                      "disk_state": disk_state}
-            all_params.append(params)
-
-    for cmd in ["feather", "hdf5", "pickle", "cPickle", "npy"]:
-        if cmd in attr:
-            params = {"cmd": cmd,
-                      "filename": attr[cmd],
-                      "sum_after": True,
-                      "disk_state": disk_state}
-            if cmd == "hdf5":
-                params["dataset"] = "mydataset"
-            all_params.append(params)
+            for cmd in ["feather", "hdf5", "pickle", "cPickle", "npy"]:
+                if cmd in attr:
+                    params = {"cmd": cmd,
+                              "filename": attr[cmd],
+                              "sum_after": True,
+                              "disk_state": disk_state}
+                if cmd == "hdf5":
+                    params["dataset"] = "mydataset"
+                all_params.append(params)
 
 params = {"cmd": "noop"}
 all_params.append(params)
