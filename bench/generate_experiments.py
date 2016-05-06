@@ -114,7 +114,7 @@ for name, attr in datasets.iteritems():
                       "disk_state": disk_state}
             if cmd == "hdf5":
                 params["dataset"] = "mydataset"
-    all_params.append(params)
+        all_params.append(params)
 
 params = {"cmd": "noop"}
 all_params.append(params)
