@@ -14,7 +14,7 @@ datasets = {"mnist":
              "cPickle": "mnist.pkl",
              "hints": "mnist-hints.json",
              "no_header": True,
-             "number_only": True
+             "number_only": True,
              "to_df": True},
             "mnist8m":
             {"csv": "mnist8m.csv",
