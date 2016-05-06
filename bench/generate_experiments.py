@@ -124,5 +124,5 @@ for i, params in enumerate(all_params):
     prefix = hparams[0:8]
     params["log"] = os.path.join(params["cmd"], "run-" + prefix + ".log")
     if not os.path.exists(params["cmd"]):
-        os.path.mkdir(params["cmd"])
+        os.makedirs(params["cmd"])
     json.dump(params, open(os.path.join(params["cmd"], "run-" + hparams[0:8] + ".json", "w"), indent=1))
