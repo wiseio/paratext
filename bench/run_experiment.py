@@ -312,11 +312,12 @@ def main():
     cmd = params.get("cmd", "")
     tic = time.time()
     log_fn = None
+    log_path = os.environ.get("PARATEXT_BENCH_LOG_PATH", ".")
+    if "log_path" in params:
+        log_path = params.pop("log_path")
     if "log" in params:
-        log_fn = params["log"]
-        log_path = os.environ.get("PARATEXT_BENCH_LOG_PATH", ".")
+        log_fn = params.pop("log")
         log_fn = os.path.join(log_path, log_fn)
-        params.pop("log")
     results = {}
     if cmd == "feather":
         results = run_feather(params)
@@ -366,7 +367,16 @@ def main():
         print log_entry
     else:
         old_log = {"log": []}
-        if os.path.isfile(log_fn):
+        # See if the directory where the logs should live exist.
+        log_dir = os.path.dirname(log_fn)
+        if log_dir == "":
+            log_dir = "."
+        # If not, create the directory.
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
+        # If the log is already there, let's read it and append to it
+        # with the new result.
+        if os.path.exists(log_fn) and os.path.isfile(log_fn):
             old_log_fid = open(log_fn, "r")
             old_log = json.load(old_log_fid)
             old_log_fid.close()

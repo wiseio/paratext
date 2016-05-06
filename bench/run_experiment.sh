@@ -3,6 +3,7 @@
 json_file="${1:-}"
 num_trials="${2:-1}"
 did="${3:normal}"
+log_path="${4:normal}"
 
 if [ "$json_file" == "" ];
 then
@@ -34,6 +35,6 @@ else
         sudo bash -c "echo 3 > /proc/sys/vm/drop_caches"
         free
         sleep 1
-        run_experiment.py "$json_file" did="$did"
+        run_experiment.py "$json_file" did="$did" log_path="$log_path"
     done
 fi

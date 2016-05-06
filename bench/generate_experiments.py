@@ -121,5 +121,7 @@ all_params.append(params)
 for i, params in enumerate(all_params):
     hparams = sha.sha(json.dumps(params)).hexdigest()
     prefix = hparams[0:8]
-    params["log"] = "run-" + prefix + ".log"
-    json.dump(params, open("run-" + hparams[0:8] + ".json", "w"), indent=1)
+    params["log"] = os.path.join(params["cmd"], "run-" + prefix + ".log")
+    if not os.path.exists(params["cmd"]):
+        os.path.mkdir(params["cmd"])
+    json.dump(params, open(os.path.join(params["cmd"], "run-" + hparams[0:8] + ".json", "w"), indent=1))
