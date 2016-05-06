@@ -125,4 +125,4 @@ for i, params in enumerate(all_params):
     params["log"] = os.path.join(params["cmd"], "run-" + prefix + ".log")
     if not os.path.exists(params["cmd"]):
         os.makedirs(params["cmd"])
-    json.dump(params, open(os.path.join(params["cmd"], "run-" + hparams[0:8] + ".json", "w")), indent=1)
+    json.dump(params, open(os.path.join(params["cmd"], "run-" + hparams[0:8] + ".json"), "w"), indent=1)
