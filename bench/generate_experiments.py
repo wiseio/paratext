@@ -130,8 +130,8 @@ for name, attr in datasets.iteritems():
 for cmd in ["sframe", "paratext", "pyspark"]:
     params = {"cmd": cmd,
               "filename": "mnist8m.csv",
-              "no_header": True
-              "to_df": True
+              "no_header": True,
+              "to_df": True,
               "sum_after": True,
               "type_hints_json": "mnist-hints.json",
               "disk_state": disk_state}
