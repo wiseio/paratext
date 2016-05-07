@@ -449,7 +449,7 @@ def main():
         sys.exit(1)
     toc = time.time()
     runtime=toc-tic
-    if cmd == "spark":
+    if cmd == "pyspark":
         mem=memory_usage_resource() + memory_usage_psutil("java")
     else:
         mem=memory_usage_resource()
