@@ -64,8 +64,8 @@ for name, attr in datasets.iteritems():
     if "csv" in attr:
         csv_filename = attr["csv"]
         for disk_state in ["cold", "warm"]:
-            for num_threads in [1,4,8,12,16,20]:
-                for block_size in [1048576]:
+            for num_threads in [1,4,8,12,16,20,24,28,32]:
+                for block_size in [32768]:
                     cmds = ["disk-to-mem", "countnl", "paratext"]
                     if attr.get("number_only", False):
                         cmds.append("avgcols")
