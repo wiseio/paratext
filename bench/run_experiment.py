@@ -135,7 +135,7 @@ def memory_usage_psutil(process_name):
     pids = get_pids(process_name)
     for pid in pids:
         process = psutil.Process(pid)
-        pmem = process.get_memory_info()[0] / float(2 ** 20)
+        pmem = process.memory_info()[0] / float(2 ** 20)
         mem += pmem
     return mem
 
