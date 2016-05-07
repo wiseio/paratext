@@ -101,7 +101,6 @@ def read_spark_csv(sc, sqlContext, filename, no_header=False):
     else:
         header = "true"
     sdf = sqlContext.read.format('com.databricks.spark.csv').option('header', header).option('inferschema', 'true').load(filename)
-    sdf.cache()
     return sdf
 
 def dict_frame_to_data_frame(d, levels):
