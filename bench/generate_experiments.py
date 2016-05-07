@@ -96,6 +96,14 @@ for name, attr in datasets.iteritems():
                           "disk_state": disk_state}
                 all_params.append(params)
 
+            if params.get("number_only", True):
+                params = {"cmd": "numpy",
+                          "filename": attr["csv"],
+                          "no_header": attr.get("no_header", True),
+                          "sum_after": True,
+                          "disk_state": disk_state}
+                all_params.append(params)                
+
             # pandas and sframes without type hints
             for cmd in ["sframe", "pandas"]:
                 params = {"cmd": cmd,
