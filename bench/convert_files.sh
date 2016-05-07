@@ -13,5 +13,5 @@ python convert.py mnist8m.csv mnist8m.feather mnist8m.hdf5 mnist8m.pkl mnist8m.n
 echo car
 python convert.py car.csv car.feather car.pkl car.npy
 echo floats
-python convert.py floats.csv floats.feather floats.pkl floats.npy
+python convert.py floats.csv floats.feather floats.pkl floats.npy floats.hdf5
 
