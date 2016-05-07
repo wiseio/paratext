@@ -140,12 +140,12 @@ def memory_usage_psutil(process_name):
     return mem
 
 def bench_disk_to_mem_baseline(params):
-    d = paratext.baseline_disk_to_mem(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1))
+    d = paratext.baseline_disk_to_mem(params["filename"], block_size=params.get("block_size", 32768), num_threads=params.get("num_threads", 1))
     return {}
 
 def bench_average_columns_baseline(params):
     avg = paratext.baseline_average_columns(params["filename"],
-                                            block_size=params.get("block_size", 1048576),
+                                            block_size=params.get("block_size", 32768),
                                             num_threads=params.get("num_threads", 1),
                                             no_header=params.get("no_header", False),
                                             allow_quoted_newlines=params.get("allow_quoted_newlines", False))
@@ -154,7 +154,7 @@ def bench_average_columns_baseline(params):
 def bench_paratext(params):
     load_tic = time.time()
     loader = paratext.internal_create_csv_loader(params["filename"],
-                                                 block_size=params.get("block_size", 1048576),
+                                                 block_size=params.get("block_size", 32768),
                                                  num_threads=params.get("num_threads", 1),
                                                  no_header=params.get("no_header", False),
                                                  allow_quoted_newlines=params.get("allow_quoted_newlines", False),
@@ -196,7 +196,7 @@ def bench_paratext(params):
             "to_df_time": to_df_time}
 
 def bench_count_newlines_baseline(params):
-    count = paratext.baseline_newline_count(params["filename"], block_size=params.get("block_size", 1048576), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False))
+    count = paratext.baseline_newline_count(params["filename"], block_size=params.get("block_size", 32768), num_threads=params.get("num_threads", 1), no_header=params.get("no_header", False))
     return {}
 
 def bench_pandas(params): #filename, type_hints_json=None, no_header=False):
@@ -333,7 +333,7 @@ def bench_feather(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def bench_spark(params):
+def bench_pyspark(params):
     from pyspark import SparkContext
     from pyspark.sql import SQLContext
     sc = SparkContext("local", "App Name", pyFiles=[])

@@ -13,7 +13,6 @@ datasets = {"mnist":
              "feather": "mnist.feather",
              "pickle": "mnist.pkl",
              "cPickle": "mnist.pkl",
-             "hints": "mnist-hints.json",
              "no_header": True,
              "number_only": True,
              "to_df": True},
@@ -24,7 +23,6 @@ datasets = {"mnist":
              "feather": "mnist8m.feather",
              "pickle": "mnist8m.pkl",
              "cPickle": "mnist8m.pkl",
-             "hints": "mnist-hints.json",
              "no_header": True,
              "number_only": True,
              "to_df": False},
@@ -82,22 +80,13 @@ for name, attr in datasets.iteritems():
                                   "to_df": True,
                                   "sum_after": True,
                                   "log": str(len(all_params)) + ".log"}
+                        if attr.get("number_only", False):
+                            params["number_only"] = True
                         mlnl = attr.get("max_level_name_length", None)
                         if mlnl:
                             params["max_level_name_length"] = mlnl
                         all_params.append(params)
         for disk_state in ["cold", "warm"]:
-            # pandas and sframes with type hints
-            for cmd in ["sframe", "pandas", "numpy"]:
-                params = {"cmd": cmd,
-                          "filename": attr["csv"],
-                          "no_header": attr.get("no_header", True),
-                          "to_df": attr.get("to_df", False),
-                          "sum_after": True,
-                          "type_hints_json": "mnist-hints.json",
-                          "disk_state": disk_state}
-                all_params.append(params)
-
             if attr.get("run_pyspark", True):
                 params = {"cmd": "pyspark",
                           "filename": attr["csv"],
@@ -133,7 +122,6 @@ for cmd in ["sframe", "paratext", "pyspark"]:
               "no_header": True,
               "to_df": True,
               "sum_after": True,
-              "type_hints_json": "mnist-hints.json",
               "disk_state": disk_state}
     all_params.append(params)
 
