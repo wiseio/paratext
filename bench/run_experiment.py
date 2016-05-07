@@ -336,7 +336,7 @@ def bench_feather(params):
 def bench_pyspark(params):
     from pyspark import SparkContext
     from pyspark.sql import SQLContext
-    sc = SparkContext("local", "App Name", pyFiles=[])
+    sc = SparkContext("local[*]", "PySpark CSV Benchmark", pyFiles=[])
     sqlContext = SQLContext(sc)
     preload_java_mem = memory_usage_psutil("java")
     preload_mem = memory_usage_resource() + memory_usage_psutil("java")
