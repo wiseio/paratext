@@ -1,3 +1,10 @@
+#
+# Rscript bench.R in.csv out.json
+#
+# Loads the file in.csv into an R data frame. Sums its numeric
+# columns. Outputs the run times and memory usage to the JSON file
+# out.json.
+
 require("rjson", quietly=TRUE)
 
 memory_usage <- function(){
@@ -6,6 +13,7 @@ memory_usage <- function(){
 
 args <- commandArgs(TRUE)
 filename <- args[1]
+result_filename <- args[2]
 load_tic <- Sys.time()
 df = read.csv(filename)
 load_toc <- Sys.time()
@@ -20,4 +28,4 @@ sum_time <- sum_toc - sum_tic
 
 results = list(cmd = "R-read.csv", load_time = load_time, mem = mem, sum_time = sum_time)
 json = rjson::toJSON(results)
-write(json, "result.json")
+write(json, result_filename)
