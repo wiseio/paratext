@@ -44,7 +44,7 @@ namespace ParaText {
   public:
     ColBasedIterator() : worker_id_(0), within_chunk_(0) {}
 
-    ColBasedIterator(std::vector<std::shared_ptr<ColBasedChunk> > &column_chunks, size_t worker_id, size_t within_chunk)
+    ColBasedIterator(std::vector<std::shared_ptr<ColHolder> > &column_chunks, size_t worker_id, size_t within_chunk)
       : column_chunks_(column_chunks), worker_id_(worker_id), within_chunk_(within_chunk) {}
     
     T operator*() const {
@@ -82,7 +82,7 @@ namespace ParaText {
     }
     
   private:
-    std::vector<std::shared_ptr<ColBasedChunk> > column_chunks_;
+    std::vector<std::shared_ptr<ColHolder> > column_chunks_;
     size_t worker_id_;
     size_t within_chunk_;
   };
@@ -115,7 +115,7 @@ namespace ParaText {
    */
   class ColBasedLoader {
   public:
-    ColBasedLoader() : cached_categorical_column_index_(std::numeric_limits<size_t>::max()) {}
+    ColBasedLoader() {}
 
     /*
       Called before .load(). Used to force a type on a column regardless of the type
@@ -182,7 +182,7 @@ namespace ParaText {
      */
     template <class T, bool Numeric>
     ColBasedIterator<T, Numeric> column_begin(size_t column_index) const {
-      std::vector<std::shared_ptr<ColBasedChunk> > column;
+      std::vector<std::shared_ptr<ColHolder> > column;
       for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
         column.push_back(column_chunks_[worker_id][column_index]);
       }
@@ -195,7 +195,7 @@ namespace ParaText {
     template <class T, bool Numeric>
     ColBasedIterator<T, Numeric> column_end(size_t column_index) const {
       (void)column_index;
-      std::vector<std::shared_ptr<ColBasedChunk> > column;
+      std::vector<std::shared_ptr<ColHolder> > column;
       return ColBasedIterator<T, Numeric>(column, column_chunks_.size(), 0);
     }
 
@@ -214,10 +214,26 @@ namespace ParaText {
       return column_range<int, true>(column_index);
     }
 
-    ColBasedPopulator get_column(size_t column_index) const {
-      if (!all_numeric_[column_index]) {
-        cache_cat_or_text_column(column_index);
+    void prepare_column(size_t column_index) const {
+      if (column_info_[column_index].semantics == TEXT) {
+        for (size_t chunk_id = 0; chunk_id < column_chunks_.size(); chunk_id++) {
+          ColHolder *other = column_chunks_[chunk_id]->convert_to_text();
+          if (other != column_chunks_[chunk_id].get()) {
+            column_chunks_[chunk_id].reset(other);
+          }
+        }
       }
+      else if (column_info_[column_index].semantics == CATEGORICAL) {
+        for (size_t chunk_id = 0; chunk_id < column_chunks_.size(); chunk_id++) {
+          ColHolder *other = column_chunks_[chunk_id]->convert_to_cat();
+          if (other != column_chunks_[chunk_id].get()) {
+            column_chunks_[chunk_id].reset(other);
+          }
+        }
+      }
+    }
+
+    ColBasedPopulator get_column(size_t column_index) const {
       ColBasedPopulator populator(this, column_index);
       return populator;
     }
@@ -282,27 +298,6 @@ namespace ParaText {
     }
 
   private:
-    void cache_cat_or_text_column(size_t column_index) const {
-      if (any_text_[column_index]) {
-        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-          column_chunks_[worker_id][column_index]->convert_to_text();
-        }
-      }
-      else {
-        cat_buffer_.clear();
-        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-          const auto &clist = column_chunks_[worker_id][column_index];
-          auto &keys = clist->get_cat_keys();
-          const size_t sz = clist->size();
-          for (size_t i = 0; i < sz; i++) {
-            const size_t other_level_index = clist->get<size_t, false>(i);
-            cat_buffer_.push_back(get_level_index(column_index, keys[other_level_index]));
-          }
-        }
-        cached_categorical_column_index_ = column_index;
-      }
-    }
-
     void update_meta_data() {
       level_names_.clear();
       level_ids_.clear();
@@ -333,17 +328,12 @@ namespace ParaText {
           column_infos_[column_index].semantics = Semantics::NUMERIC;
         }
         else {
-          /* If they're not all numeric, convert to categorical. Some may become text. */
           for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-            column_chunks_[worker_id][column_index]->convert_to_cat_or_text();
             any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
           }
           /* If any became text or there were text chunks, convert all chunks for the
              column to raw text. */
           if (any_text_[column_index]) {
-            for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-              column_chunks_[worker_id][column_index]->convert_to_text();
-            }
             common_type_index_[column_index] = std::type_index(typeid(std::string));
             column_infos_[column_index].semantics = Semantics::TEXT;
           }
@@ -365,7 +355,7 @@ namespace ParaText {
   private:
     void spawn_parse_workers(const std::string &filename, const ParaText::ParseParams &params) {
       std::vector<std::thread> threads;
-      std::vector<std::shared_ptr<ColBasedParseWorker<ColBasedChunk> > > workers;
+      std::vector<std::shared_ptr<ColBasedParseWorker<ColHolder> > > workers;
       //std::cerr << "number of threads: " << num_threads_ << std::endl;
       std::exception_ptr thread_exception;
       size_t num_threads = chunker_.num_chunks();
@@ -383,10 +373,10 @@ namespace ParaText {
         for (size_t col = 0; col < column_infos_.size(); col++) {
           auto fit = forced_semantics_.find(column_infos_[col].name);
           if (fit == forced_semantics_.end()) {
-            column_chunks_.back().push_back(std::make_shared<ColBasedChunk>(column_infos_[col].name, params.max_level_name_length, params.max_levels, Semantics::UNKNOWN));
+            column_chunks_.back().push_back(std::make_shared<ColHolder>(column_infos_[col].name, params.max_level_name_length, params.max_levels, Semantics::UNKNOWN));
           }
           else {
-            column_chunks_.back().push_back(std::make_shared<ColBasedChunk>(column_infos_[col].name, params.max_level_name_length, params.max_levels, fit->second));
+            column_chunks_.back().push_back(std::make_shared<ColHolder>(column_infos_[col].name, params.max_level_name_length, params.max_levels, fit->second));
           }
         }
 #ifdef PARALOAD_DEBUG
@@ -395,8 +385,8 @@ namespace ParaText {
                   << " " << end_of_chunk
                   << " " << (end_of_chunk - start_of_chunk) << std::endl;
 #endif
-        workers.push_back(std::make_shared<ColBasedParseWorker<ColBasedChunk> >(column_chunks_.back()));
-        threads.emplace_back(&ColBasedParseWorker<ColBasedChunk>::parse,
+        workers.push_back(std::make_shared<ColBasedParseWorker<ColHolder> >(column_chunks_.back()));
+        threads.emplace_back(&ColBasedParseWorker<ColHolder>::parse,
                              workers.back(),
                              filename,
                              start_of_chunk,
@@ -420,7 +410,7 @@ namespace ParaText {
   private:
     template <class OutputIterator, class T>
     typename std::enable_if<std::is_arithmetic<T>::value, void >::type copy_column_impl(size_t column_index, OutputIterator it) const {
-      if (all_numeric_[column_index]) {
+      if (column_info_[column_index].semantics == Semantics::CATEGORICAL) {
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
           const auto &clist = column_chunks_[worker_id][column_index];
           const size_t sz = clist->size();
@@ -429,7 +419,7 @@ namespace ParaText {
             it++;
           }
         }
-      } else if (any_text_[column_index]) {
+      } else if (column_info_[column_index].semantics == Semantics::TEXT) {
         std::ostringstream ostr;
         ostr << "numeric output iterator expected for column " << column_index;
         throw std::logic_error(ostr.str());
@@ -503,7 +493,7 @@ namespace ParaText {
     size_t length_;
     std::unordered_map<std::string, Semantics> forced_semantics_;
     mutable size_t cached_categorical_column_index_;
-    mutable std::vector<std::vector<std::shared_ptr<ColBasedChunk> > > column_chunks_;
+    mutable std::vector<std::vector<std::shared_ptr<ColHolder> > > column_chunks_;
     std::vector<ColumnInfo> column_infos_;
     std::vector<bool> all_numeric_;
     std::vector<bool> any_text_;

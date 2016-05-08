@@ -27,6 +27,8 @@
 #include "util/widening_vector.hpp"
 #include "util/strings.hpp"
 
+#include "colbased_holder2.hpp"
+
 #include <typeindex>
 #include <sstream>
 
@@ -224,42 +226,8 @@ namespace CSV {
       return it->second;
     }
 
-    /*
-     * Converts all floating point data collected by this handler into
-     * categorical data.
-     */
-    void convert_to_cat_or_text() {
-      if (number_data_.size() > 0) {
-        for (size_t i = 0; i < number_data_.size(); i++) {
-          add_cat_data(std::to_string(number_data_.get<float>(i)));
-        }
-        number_data_.clear();
-        number_data_.shrink_to_fit();
-      }
-    }
-
-    void convert_to_text() {
-      if (number_data_.size() > 0 || forced_semantics_ == Semantics::TEXT) {
-        for (size_t i = 0; i < number_data_.size(); i++) {
-          text_data_.push_back(std::to_string(number_data_.get<float>(i)));
-        }
-        number_data_.clear();
-        number_data_.shrink_to_fit();
-      }
-      else if (cat_data_.size() > 0) {
-        for (size_t i = 0; i < cat_data_.size(); i++) {
-          text_data_.push_back(cat_keys_[cat_data_.get<long>(i)]);
-        }
-        cat_data_.clear();
-        cat_data_.shrink_to_fit();
-        cat_ids_.clear();
-        cat_keys_.clear();
-        cat_keys_.shrink_to_fit();
-      }
-    }
-
     void add_cat_data(const std::string &data) {
-      ColBasedHolder *other = holder->process_categorical();
+      ColBasedHolder *other = holder->process_string(data);
       if (other != holder.get()) {
         holder.reset(other);
       }
@@ -271,13 +239,7 @@ namespace CSV {
 
   private:
     std::string column_name_;
-    widening_vector_dynamic<uint8_t, int8_t, int16_t, int32_t, int64_t, float> number_data_;
-    widening_vector_dynamic<uint8_t, uint8_t, uint16_t, uint32_t, uint64_t>    cat_data_;
-    std::unordered_map<std::string, size_t>                                    cat_ids_;
-    std::vector<std::string>                                                   cat_keys_;
-    std::vector<std::string>                                                   text_data_;
-    size_t                                                                     max_level_name_length_;
-    size_t                                                                     max_levels_;
+    std::unique_ptr<ColHolder> holder_;
     Semantics                                                                  forced_semantics_;
   };
 }

@@ -120,20 +120,42 @@ struct widening_vector_impl_base {
 
   virtual widening_vector_impl_base *v_push_back(float f) = 0;
   virtual widening_vector_impl_base *v_push_back(long f) = 0;
-  virtual widening_vector_impl_base *v_push_back(const std::string &val) {
-    (void)val;
-    throw std::logic_error("not implemented");
-    return NULL;
-  }
 
   virtual void v_shrink_to_fit() = 0;
-  virtual widening_vector_impl_base *v_get_active() const = 0;
   virtual size_t v_size() const = 0;
   virtual float v_get_float(size_t i) const = 0;
   virtual long v_get_long(size_t i) const = 0;
   virtual void v_clear() = 0;
   virtual std::type_index v_get_type_index() const = 0;
   virtual std::type_index v_get_common_type_index(std::type_index idx) const = 0;
+
+  virtual void copy_into(uint8_t* array) const = 0;
+  virtual void copy_into(uint16_t* array) const = 0;
+  virtual void copy_into(uint32_t* array) const = 0;
+  virtual void copy_into(uint64_t* array) const = 0;
+  virtual void copy_into(int8_t* array) const = 0;
+  virtual void copy_into(int16_t* array) const = 0;
+  virtual void copy_into(int32_t* array) const = 0;
+  virtual void copy_into(int64_t* array) const = 0;
+  virtual void copy_into(float* array) const = 0;
+  virtual void copy_into(double* array) const = 0;
+};
+
+template <class WVT>
+struct widening_vector_impl_crtp : public widening_vector_impl_base {
+  widening_vector_impl_crtp() {}
+  virtual ~widening_vector_impl_crtp() {}
+
+  virtual void copy_into(uint8_t* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(uint16_t* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(uint32_t* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(uint64_t* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(int8_t* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(int16_t* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(int32_t* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(int64_t* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(float* array) const { ((WVT*)this)->copy_into_impl(array); }
+  virtual void copy_into(double* array) const { ((WVT*)this)->copy_into_impl(array); }
 };
 
 /*
@@ -144,7 +166,7 @@ struct widening_vector_impl_base {
  * As more values are added, the vector widens the precision in-situ.
  */
 template <size_t I, class ... Ts>
-struct widening_vector_impl {};
+struct widening_vector_impl;
 
 /*
  * The inductive case assumes that given a type Head, all subsequent
@@ -152,37 +174,14 @@ struct widening_vector_impl {};
  * point type.
  */
 template <size_t I, class Head, class ... Ts>
-struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_base {
+struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<widening_vector_impl<I, Head, Ts...>> {
 
   /*
     Constructs an empty widened vector.
    */
-  widening_vector_impl() : active_(true) {}
+  widening_vector_impl() {}
 
   virtual ~widening_vector_impl() {}
-
-  /*
-   * Retrieves a value from the vector. If the type referred by this
-   * base case type is active, it is casted to the requested type T and
-   * returned. Otherwise, the request is propogated to the next type.
-   */
-  /*template <class T>
-  T get(size_t i) const {
-    if (active_) {
-      return (T)values_[i];
-    }
-    else {
-      return wider_.get<T>(i);
-    }
-    }*/
-
-  /*
-   * Appends this vector with another datum.
-   */
-  /*template <class T>
-  void push_back(T value) {
-    push_back_impl(value);
-    }*/
 
   virtual widening_vector_impl_base *v_push_back(float value) {
     //    std::cout << "f";
@@ -259,18 +258,11 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_base {
   void clear() {
     values_.clear();
     wider_.clear();
-    active_ = true;
     values_.shrink_to_fit();
   }
 
   virtual void v_clear() {
     clear();
-  }
-
-  virtual widening_vector_impl_base *v_get_active() const {
-    return active_
-      ? (widening_vector_impl_base *)this
-      : (widening_vector_impl_base *)wider_.v_get_active();
   }
 
   virtual float v_get_float(size_t i) const {
@@ -289,6 +281,11 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_base {
     return std::type_index(typeid(Head));
   }
 
+  template <class T>
+  void copy_into_impl(T *output) {
+    std::copy(values_.begin(), values_.end(), output);
+  }
+
 private:
 
   /*
@@ -300,7 +297,6 @@ private:
 
   template <class THead>
   typename std::enable_if<std::is_integral<THead>::value, void>::type move_to_wider_impl() {
-    active_ = false;
     for (size_t i = 0; i < values_.size(); i++) {
       wider_.v_push_back((long)values_[i]);
     }
@@ -310,7 +306,6 @@ private:
 
   template <class THead>
   typename std::enable_if<!std::is_integral<THead>::value, void>::type move_to_wider_impl() {
-    active_ = false;
     for (size_t i = 0; i < values_.size(); i++) {
       wider_.v_push_back((float)values_[i]);
     }
@@ -338,18 +333,13 @@ private:
  * be the widest and most precise.
  */
 template <class Head>
-struct widening_vector_impl<1, Head> : public widening_vector_impl_base {
+struct widening_vector_impl<1, Head> : public widening_vector_impl_crtp<widening_vector_impl<1, Head>> {
 
   widening_vector_impl() {}
 
   template <class T>
   T get(size_t i) const {
     return (T)values_[i];
-  }
-
-  template <class T>
-  void push_back(T value) {
-    values_.push_back(value);
   }
 
   size_t size() const {
@@ -394,10 +384,6 @@ struct widening_vector_impl<1, Head> : public widening_vector_impl_base {
     shrink_to_fit();
   }
 
-  virtual widening_vector_impl_base *v_get_active() const {
-    return (widening_vector_impl_base*)this;
-  }
-
   virtual float v_get_float(size_t i) const {
     return (float)values_[i];
   }
@@ -414,79 +400,14 @@ struct widening_vector_impl<1, Head> : public widening_vector_impl_base {
     return std::type_index(typeid(Head));
   }
 
+  template <class T>
+  void copy_into_impl(T *output) {
+    std::copy(values_.begin(), values_.end(), output);
+  }
+
 private:
   std::vector<Head> values_;
 };
-
-class widening_vector_impl_str : public widening_vector_impl_base {
-public:
-  widening_vector_impl_str() {}
-  virtual ~widening_vector_impl_str() {}
-
-  virtual widening_vector_impl_base *v_push_back(float val) {
-    std::string s(std::to_string(val));
-    push_back(s);
-    return this;
-  }
-
-  virtual widening_vector_impl_base *v_push_back(long val) {
-    std::string s(std::to_string(val));
-    push_back(s);
-    return this;
-  }
-
-  virtual widening_vector_impl_base *v_push_back(const std::string &val) {
-    push_back(val);
-    return this;
-  }
-
-  virtual void v_shrink_to_fit() {
-    values_.shrink_to_fit();
-  }
-
-  virtual widening_vector_impl_base *v_get_active() const {
-    return (widening_vector_impl_base*)this;
-  }
-
-  virtual size_t v_size() const {
-    return values_.size();
-  }
-
-  virtual float v_get_float(size_t) const {
-    return 0.0;
-  }
-
-  virtual long v_get_long(size_t) const {
-    return 0;
-  }
-
-  virtual void v_clear() {
-    values_.clear();
-  }
-
-  virtual std::type_index v_get_type_index() const {
-    return std::type_index(typeid(std::string));
-  }
-
-  virtual std::type_index v_get_common_type_index(std::type_index idx) const {
-    (void)idx;
-    return std::type_index(typeid(std::string));
-  }
-
-private:
-  void push_back(const std::string &val) {
-    auto it = ids_.find(val);
-    if (it != ids_.end()) {
-      std::tie(it, std::ignore) = ids_.insert(std::make_pair(val, ids_.size()));
-    }
-    values_.push_back(it->second);
-  }
-
-private:
-  std::vector<size_t> values_;
-  std::unordered_map<std::string, size_t> ids_;
-};
-
 
 /*
  * A widenened vector, which is a vector of dynamic width numbers. In the
@@ -506,20 +427,14 @@ private:
  */
 
 template <class... T>
-struct widening_vector_static : public widening_vector_impl<sizeof...(T), T...> {};
-
-template <class... T>
 class widening_vector_dynamic {
 public:
-  widening_vector_dynamic() : first_(NULL), current_(NULL), str_(NULL) {
+  widening_vector_dynamic() : first_(NULL), current_(NULL) {
     first_ = &values_;
     current_ = first_;
-    str_ = new widening_vector_impl_str();
   }
 
   virtual ~widening_vector_dynamic() {
-    delete str_;
-    str_ = NULL;
   }
   
   void push_back(float val) {
@@ -528,18 +443,6 @@ public:
 
   void push_back(long val) {
     current_ = current_->v_push_back(val);
-  }
-
-  void push_back(const std::string &val) {
-    if (current_ != str_) {
-      const size_t sz(current_->v_size());
-      for (size_t i = 0; i < sz; i++) {
-        str_->v_push_back(current_->v_get_float(i));
-        current_->v_clear();
-      }
-      current_ = str_;
-    }
-    current_->v_push_back(val);    
   }
 
   size_t size() const {
@@ -574,11 +477,21 @@ public:
     return current_->v_get_common_type_index(idx);
   }
 
+  virtual void copy_into(uint8_t* array) const { current_->copy_into(array); }
+  virtual void copy_into(uint16_t* array) const { current_->copy_into(array); }
+  virtual void copy_into(uint32_t* array) const { current_->copy_into(array); }
+  virtual void copy_into(uint64_t* array) const { current_->copy_into(array); }
+  virtual void copy_into(int8_t* array) const { current_->copy_into(array); }
+  virtual void copy_into(int16_t* array) const { current_->copy_into(array); }
+  virtual void copy_into(int32_t* array) const { current_->copy_into(array); }
+  virtual void copy_into(int64_t* array) const { current_->copy_into(array); }
+  virtual void copy_into(float* array) const { current_->copy_into(array); }
+  virtual void copy_into(double* array) const { current_->copy_into(array); }
+
 private:
   widening_vector_impl<sizeof...(T), T...> values_;
   widening_vector_impl_base *first_;
   widening_vector_impl_base *current_;
-  widening_vector_impl_base *str_;
 };
 
 #endif

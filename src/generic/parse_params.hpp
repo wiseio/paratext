@@ -33,14 +33,23 @@ namespace ParaText {
   typedef enum {NONE, SNAPPY, MSGPACK} Compression;
 
   typedef enum {CATEGORICAL, NUMERIC, TEXT, UNKNOWN} Semantics;
+  typedef enum {TH_NONE, TH_UINT8, TH_INT8, TH_UINT16, TH_INT16, TH_UINT32, TH_INT32, TH_UINT64, TH_INT64, TH_FLOAT, TH_DOUBLE} TypeHint;
 
   struct ColumnInfo {
     std::string name;
     Semantics semantics;
   };
 
+  struct ColParams {
+    ColParams() : max_level_name_length(std::numeric_limits<size_t>::max()), max_levels(std::numeric_limits<size_t>::max()), type_hint(TH_NONE), force_semantics(Semantics::UNKNOWN) {}
+    size_t max_level_name_length;
+    size_t max_levels;
+    TypeHint type_hint;
+    Semantics force_semantics;
+  };
+
   struct ParseParams {
-    ParseParams() : no_header(false), number_only(false), block_size(32768), num_threads(16), allow_quoted_newlines(false),  max_level_name_length(std::numeric_limits<size_t>::max()), max_levels(std::numeric_limits<size_t>::max()), compression(Compression::NONE), parser_type(ParserType::ROW_BASED) {}
+    ParseParams() : no_header(false), number_only(false), block_size(32768), num_threads(16), allow_quoted_newlines(false), max_level_name_length(std::numeric_limits<size_t>::max()), max_levels(std::numeric_limits<size_t>::max()), compression(Compression::NONE), parser_type(ParserType::ROW_BASED) {}
     bool no_header;
     bool number_only;
     size_t block_size;
