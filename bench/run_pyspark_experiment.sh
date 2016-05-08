@@ -38,7 +38,7 @@ else
         sudo bash -c "echo 3 > /proc/sys/vm/drop_caches"
         free
         sleep 1
-        spark-submit $(which run_experiment.py) "$json_file" did="$did" log_path="$log_path"
+        spark-submit $SPARK_OPTIONS $(which run_experiment.py) "$json_file" did="$did" log_path="$log_path"
     done
 fi
 
