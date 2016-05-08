@@ -5,9 +5,6 @@ num_trials="${2:-1}"
 did="${3:-normal}"
 log_path="${4:-normal}"
 
-# Set BENCH_PYSPARK="local[16] bin/pyspark" to run on 16 cores.
-pyspark=${BENCH_PYSPARK}
-
 if [ "$json_file" == "" ];
 then
     echo "usage: run_experiment.sh json_filename [num_trials:1]"

@@ -5,9 +5,6 @@ num_trials="${2:-1}"
 did="${3:-normal}"
 log_path="${4:-normal}"
 
-# Set BENCH_PYSPARK="local[16] bin/pyspark" to run on 16 cores.
-pyspark=${BENCH_PYSPARK}
-
 if [ "$json_file" == "" ];
 then
     echo "usage: run_experiment.sh json_filename [num_trials:1]"
@@ -15,6 +12,8 @@ then
 fi
 
 echo "Starting ${num_trials} trials on ${json_file}"
+
+SPARK_OPTIONS="--driver-memory 300G --executor-memory 300G --num-executors 32 --packages com.databricks:spark-csv_2.11:1.4.0"
 
 if [ "$(grep warm $json_file | wc -l)" == "1" ]
 then
