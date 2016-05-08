@@ -158,7 +158,8 @@ def bench_paratext(params):
                                                  num_threads=params.get("num_threads", 1),
                                                  no_header=params.get("no_header", False),
                                                  allow_quoted_newlines=params.get("allow_quoted_newlines", False),
-                                                 max_level_name_length=params.get("max_level_name_length", None))
+                                                 max_level_name_length=params.get("max_level_name_length", None),
+                                                 number_only=params.get("number_only", False))
     load_toc = time.time()
     load_time = load_toc - load_tic
     transfer_tic = time.time()
