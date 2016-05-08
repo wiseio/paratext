@@ -279,8 +279,10 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
   }
 
   template <class T>
-  void copy_into_impl(T *output) {
-    std::copy(values_.begin(), values_.end(), output);
+  void copy_into_impl(T *output) const {
+    for (size_t i = 0; i < values_.size(); i++) {
+      output[i] = values_[i];
+    }
   }
 
 private:
@@ -398,8 +400,10 @@ struct widening_vector_impl<1, Head> : public widening_vector_impl_crtp<widening
   }
 
   template <class T>
-  void copy_into_impl(T *output) {
-    std::copy(values_.begin(), values_.end(), output);
+  void copy_into_impl(T *output) const {
+    for (size_t i = 0; i < values_.size(); i++) {
+      output[i] = values_[i];
+    }
   }
 
 private:
