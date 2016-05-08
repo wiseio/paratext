@@ -34,6 +34,7 @@ import numpy as np
 import pickle
 import cPickle
 import sframe
+import tempfile
 from subprocess import check_output
 
 
@@ -334,6 +335,22 @@ def bench_feather(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
+def bench_R(params):
+    sum_time = '?'
+    f = tempfile.NamedTemporaryFile(delete=False)
+    tmp_result_fn = f.name
+    runtime_tic = time.time()
+    os.system("Rscript bench.R %s %s" % (params["filename"], tmp_result_fn))
+    runtime_toc = time.time()
+    runtime = runtime_toc - runtime_tic
+    fid = open(tmp_result_fn)
+    result_json = json.load(fid)
+    fid.close()
+    f.close()
+    result_json["runtime"] = runtime
+    os.unlink(tmp_result_fn)
+    return result_json
+
 def bench_pyspark(params):
     from pyspark import SparkContext
     from pyspark.sql import SQLContext
@@ -435,6 +452,8 @@ def main():
         results = bench_pyspark(params)
     elif cmd == "cPickle":
         results = bench_cPickle(params)
+    elif cmd == "R-readcsv":
+        results = bench_R(params)
     elif cmd == "sframe":
         results = bench_sframe(params)
     elif cmd == "disk-to-mem":
@@ -450,8 +469,12 @@ def main():
         sys.exit(1)
     toc = time.time()
     runtime=toc-tic
+    if cmd == "R-readcsv":
+        runtime = results["runtime"]
     if cmd == "pyspark":
         mem=memory_usage_resource() + memory_usage_psutil("java")
+    elif cmd == "R-readcsv":
+        mem=results["mem"]
     else:
         mem=memory_usage_resource()
     log_entry = params.copy()

@@ -104,7 +104,7 @@ for name, attr in datasets.iteritems():
                           "disk_state": disk_state}
                 all_params.append(params)                
 
-            for cmd in ["sframe", "pandas", "R"]:
+            for cmd in ["sframe", "pandas", "R-readcsv"]:
                 params = {"cmd": cmd,
                           "filename": attr["csv"],
                           "no_header": attr.get("no_header", True),
