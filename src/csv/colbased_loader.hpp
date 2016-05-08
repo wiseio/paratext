@@ -47,11 +47,11 @@ namespace ParaText {
     ColBasedIterator(std::vector<std::shared_ptr<ColBasedChunk> > &column_chunks, size_t worker_id, size_t within_chunk)
       : column_chunks_(column_chunks), worker_id_(worker_id), within_chunk_(within_chunk) {}
     
-    T operator*() const {
+    inline T operator*() const {
       return column_chunks_[worker_id_]->template get<T, Numeric>(within_chunk_);
     }
     
-    ColBasedIterator &operator++() {
+    inline ColBasedIterator &operator++() {
       if (within_chunk_ < column_chunks_[worker_id_]->size()) {
         within_chunk_++;
       }
@@ -62,7 +62,7 @@ namespace ParaText {
       return *this;
     }
     
-    ColBasedIterator &operator++(int) {
+    inline ColBasedIterator &operator++(int) {
       if (within_chunk_ < column_chunks_[worker_id_]->size()) {
         within_chunk_++;
       }
@@ -73,11 +73,11 @@ namespace ParaText {
       return *this;
     }
     
-    bool operator==(const ColBasedIterator& other) const {
+    inline bool operator==(const ColBasedIterator& other) const {
       return worker_id_ == other.worker_id_ && within_chunk_ == other.within_chunk_;
     }
     
-    bool operator!=(const ColBasedIterator& other) const {
+    inline bool operator!=(const ColBasedIterator& other) const {
       return !(*this == other);
     }
     
@@ -99,6 +99,9 @@ namespace ParaText {
 
     template <class OutputIterator, class T = typename std::iterator_traits<OutputIterator>::value_type>
     void insert(OutputIterator oit) const;
+
+    template <class T>
+    void insert_into_buffer(T *buffer) const;
 
     template <class OutputIterator, class T = typename std::iterator_traits<OutputIterator>::value_type>
     void insert_and_forget(OutputIterator oit) const;
@@ -225,6 +228,11 @@ namespace ParaText {
     template <class OutputIterator, class T=typename std::iterator_traits<OutputIterator>::value_type>
     void copy_column(size_t column_index, OutputIterator it) const {
       copy_column_impl<OutputIterator, T>(column_index, it);
+    }
+
+    template <class T>
+    void copy_column_into_buffer(size_t column_index, T *buffer) const {
+      copy_column_into_buffer_impl<T>(column_index, buffer);
     }
 
     template <class OutputIterator, class T=typename std::iterator_traits<OutputIterator>::value_type>
@@ -538,6 +546,33 @@ namespace ParaText {
       }
     }
 
+    template <class T>
+    typename std::enable_if<std::is_arithmetic<T>::value, void >::type copy_column_into_buffer_impl(size_t column_index, T *buffer) const {
+      if (all_numeric_[column_index]) {
+        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+          const auto &clist = column_chunks_[worker_id][column_index];
+          const size_t sz = clist->size();
+          clist->copy_numeric_into(buffer);
+          buffer += sz;
+        }
+      } else if (any_text_[column_index]) {
+        std::ostringstream ostr;
+        ostr << "numeric output iterator expected for column " << column_index;
+        throw std::logic_error(ostr.str());
+      }
+      else {
+        if (cached_categorical_column_index_ != column_index) {
+          cache_cat_or_text_column(column_index);
+        }
+        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+          const auto &clist = column_chunks_[worker_id][column_index];
+          const size_t sz = clist->size();
+          clist->copy_cat_into(buffer);
+          buffer += sz;
+        }
+      }
+    }
+
   private:
     mutable std::vector<std::unordered_map<std::string, size_t> > level_ids_;
     mutable std::vector<std::vector<std::string> > level_names_;
@@ -562,6 +597,11 @@ namespace ParaText {
   template <class OutputIterator, class T>
   void ColBasedPopulator::insert(OutputIterator oit) const {
     loader_->copy_column<OutputIterator, T>(column_index_, oit);
+  }
+
+  template <class T>
+  void ColBasedPopulator::insert_into_buffer(T *buffer) const {
+    loader_->copy_column_into_buffer<T>(column_index_, buffer);
   }
 
   template <class OutputIterator, class T>

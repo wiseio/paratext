@@ -194,7 +194,7 @@ struct derived_insert_populator_impl : public base_insert_populator_impl<Populat
     try {
       array = (PyObject*)PyArray_SimpleNew(1, fdims, numpy_type<value_type>::id);
       value_type *data = (value_type*)PyArray_DATA((PyArrayObject*)array);
-      populator.insert(data);
+      populator.insert_into_buffer(data);
     }
     catch (...) {
       Py_XDECREF(array);
@@ -209,7 +209,7 @@ struct derived_insert_populator_impl : public base_insert_populator_impl<Populat
 struct string_array_output_iterator  : public std::iterator<std::forward_iterator_tag, std::string> {
   string_array_output_iterator(PyArrayObject *array) : i(0), array(array) {}
 
-  string_array_output_iterator &operator++() {
+  inline string_array_output_iterator &operator++() {
     PyObject *s = PyString_FromStringAndSize(output.c_str(), output.size());
     PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
     Py_XDECREF(*ref);
@@ -219,11 +219,11 @@ struct string_array_output_iterator  : public std::iterator<std::forward_iterato
     return *this;
   }
 
-  string_array_output_iterator &operator++(int) {
+  inline string_array_output_iterator &operator++(int) {
     return operator++();
   }
 
-  std::string &operator*() {
+  inline std::string &operator*() {
     return output;
   }
   

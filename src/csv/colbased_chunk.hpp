@@ -166,18 +166,6 @@ namespace CSV {
       }
     }
 
-    template <class T>
-    size_t insert_numeric(T *oit) {
-      if (cat_data_.size() > 0) {
-        throw std::logic_error("expected numeric data");
-      }
-      size_t to_copy = number_data_.size();
-      for (size_t i = 0; i < to_copy; i++) {
-        oit[i] = (T)number_data_.get<float>(i);
-      }
-      return to_copy;
-    }
-
     template <class T, bool Numeric>
     inline typename std::enable_if<std::is_arithmetic<T>::value && Numeric, T>::type get(size_t i) const {
       return number_data_.get<T>(i);
@@ -276,6 +264,16 @@ namespace CSV {
 
     const std::string &get_text(size_t i) const {
       return text_data_[i];
+    }
+
+    template <class T>
+    void copy_numeric_into(T *out) {
+      number_data_.copy_into(out);
+    }
+
+    template <class T>
+    void copy_cat_into(T *out) {
+      cat_data_.copy_into(out);
     }
 
   private:
