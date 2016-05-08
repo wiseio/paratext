@@ -23,11 +23,11 @@ then
     # First do a cold run and throw away the log.
     sudo bash -c "sync || sync || sync || sync"
     sudo bash -c "echo 3 > /proc/sys/vm/drop_caches"
-    spark-submit $(which run_experiment.py) "$json_file" log="/dev/null" did="$did"
+    spark-submit $SPARK_OPTIONS $(which run_experiment.py) "$json_file" log="/dev/null" did="$did"
 
     # Now do x trials
     for trials in $(seq 1 $num_trials); do
-        spark-submit $(which run_experiment.py) "$json_file" did="$did" log_path="$log_path"
+        spark-submit $SPARK_OPTIONS $(which run_experiment.py) "$json_file" did="$did" log_path="$log_path"
     done
 else
     echo cold: $json_file
