@@ -1,5 +1,6 @@
+#!/usr/bin/env Rscript
 #
-# Rscript bench.R in.csv out.json
+# bench.R in.csv out.json
 #
 # Loads the file in.csv into an R data frame. Sums its numeric
 # columns. Outputs the run times and memory usage to the JSON file
