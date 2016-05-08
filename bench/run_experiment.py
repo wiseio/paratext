@@ -340,7 +340,7 @@ def bench_R(params):
     f = tempfile.NamedTemporaryFile(delete=False)
     tmp_result_fn = f.name
     runtime_tic = time.time()
-    os.system("Rscript bench.R %s %s" % (params["filename"], tmp_result_fn))
+    os.system("bench.R %s %s" % (params["filename"], tmp_result_fn))
     runtime_toc = time.time()
     runtime = runtime_toc - runtime_tic
     fid = open(tmp_result_fn)
