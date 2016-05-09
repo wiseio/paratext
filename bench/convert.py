@@ -5,6 +5,7 @@ import pickle
 import feather
 import h5py
 import numpy as np
+import scipy.io as sio
 import os
 import sys
 
@@ -26,6 +27,10 @@ def convert_pkl(df, output_filename):
     pickle.dump(df, fid)
     fid.close()
 
+def convert_mat(df, output_filename):
+    dd = {key: df[key].values.flatten() for key in df.keys()}
+    sio.savemat(output_filename, dd)
+
 input_filename = sys.argv[1]
 output_filenames = sys.argv[2:]
 
@@ -45,5 +50,7 @@ for output_filename in output_filenames:
         convert_pkl(df, output_filename)
     elif extension == ".npy":
         convert_npy(df, output_filename)
+    elif extension == ".mat":
+        convert_mat(df, output_filename)
     else:
         print "skipping '%s'; invalid output format '%s'" % (output_filename, extension)

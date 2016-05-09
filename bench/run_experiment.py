@@ -31,6 +31,7 @@ import pandas
 import h5py
 import feather
 import numpy as np
+import scipy.io as sio
 import pickle
 import cPickle
 import sframe
@@ -74,6 +75,18 @@ def sum_dictframe(d, levels):
             s[key] = level
         else:
             s[key] = d[key].sum()
+    return s
+
+def sum_mat_dict(dd):
+    s = {}
+    for key in dd.keys():
+        if key.startswith("__"):
+            continue
+        if dd[key].dtype == np.object_:
+            _, c = dd[key].shape
+            s[key] = np.sum([len(dd[key][0,i][0]) for i in xrange(0, c)])
+        else:
+            s[key] = dd[key].sum()
     return s
 
 def sum_ndarray(X):
@@ -336,7 +349,6 @@ def bench_feather(params):
     return {"sum_time": sum_time}
 
 def bench_R(params):
-    sum_time = '?'
     f = tempfile.NamedTemporaryFile(delete=False)
     tmp_result_fn = f.name
     runtime_tic = time.time()
@@ -350,6 +362,19 @@ def bench_R(params):
     result_json["runtime"] = runtime
     os.unlink(tmp_result_fn)
     return result_json
+
+def bench_mat(params):
+    load_tic = time.time()
+    dd = sio.loadmat(params["filename"])
+    load_toc = time.time()
+    load_time = load_toc - load_tic
+    sum_time = '?'
+    if params.get("sum_after", False):
+        sum_tic = time.time()
+        s = sum_mat_dict(dd)
+        sum_toc = time.time()
+        sum_time = sum_toc - sum_tic
+    return {"sum_time": sum_time, "load_time": load_time}
 
 def bench_pyspark(params):
     from pyspark import SparkContext
@@ -452,6 +477,8 @@ def main():
         results = bench_pyspark(params)
     elif cmd == "cPickle":
         results = bench_cPickle(params)
+    elif cmd == "mat":
+        results = bench_mat(params)
     elif cmd == "R-readcsv":
         results = bench_R(params)
     elif cmd == "sframe":
