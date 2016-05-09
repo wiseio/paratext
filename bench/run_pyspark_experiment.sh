@@ -13,7 +13,7 @@ fi
 
 echo "Starting ${num_trials} trials on ${json_file}"
 
-SPARK_OPTIONS="--driver-memory 300G --executor-memory 300G --num-executors 32 --packages com.databricks:spark-csv_2.11:1.4.0"
+SPARK_OPTIONS="--driver-memory 300G --executor-memory 300G --num-executors 32 --conf spark.driver.maxResultSize=10g --packages com.databricks:spark-csv_2.11:1.4.0"
 
 if [ "$(grep warm $json_file | wc -l)" == "1" ]
 then
