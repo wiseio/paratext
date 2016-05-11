@@ -50,8 +50,19 @@ template <class Head>
 struct max_sizeof<Head> : public std::integral_constant<std::size_t, sizeof(Head)> {};
 
 static std::string get_type_name(std::type_index idx) {
-  static std::unordered_map<std::type_index, std::string> names;
-  if (names.size() == 0) {
+  static std::unordered_map<std::type_index, std::string>
+    names({std::make_pair(std::type_index(typeid(uint8_t)), "uint8"),
+          std::make_pair(std::type_index(typeid(uint16_t)), "uint16"),
+          std::make_pair(std::type_index(typeid(uint32_t)), "uint32"),
+          std::make_pair(std::type_index(typeid(uint64_t)), "uint64"),
+          std::make_pair(std::type_index(typeid(int8_t)), "int8"),
+          std::make_pair(std::type_index(typeid(int16_t)), "int16"),
+          std::make_pair(std::type_index(typeid(int32_t)), "int32"),
+          std::make_pair(std::type_index(typeid(int64_t)), "int64"),
+          std::make_pair(std::type_index(typeid(float)), "float"),
+          std::make_pair(std::type_index(typeid(double)), "double"),
+          std::make_pair(std::type_index(typeid(std::string)), "string")});
+  /*if (names.size() == 0) {
     names.insert(std::make_pair(std::type_index(typeid(uint8_t)), "uint8"));
     names.insert(std::make_pair(std::type_index(typeid(uint16_t)), "uint16"));
     names.insert(std::make_pair(std::type_index(typeid(uint32_t)), "uint32"));
@@ -63,7 +74,7 @@ static std::string get_type_name(std::type_index idx) {
     names.insert(std::make_pair(std::type_index(typeid(float)), "float"));
     names.insert(std::make_pair(std::type_index(typeid(double)), "double"));
     names.insert(std::make_pair(std::type_index(typeid(std::string)), "string"));
-  }
+    }*/
   auto it = names.find(idx);
   if (it == names.end()) {
     return idx.name();
@@ -75,7 +86,29 @@ static std::string get_type_name(std::type_index idx) {
 
 template <class T>
 static std::type_index get_common_type_index(std::type_index idx) {
-  static std::unordered_map<std::type_index, std::type_index> common_types;
+  static std::unordered_map<std::type_index, std::type_index>
+    common_types({
+                  std::make_pair(std::type_index(typeid(uint8_t)),
+                                 std::type_index(typeid(typename std::common_type<T, uint8_t>::type))),
+                  std::make_pair(std::type_index(typeid(uint16_t)),
+                                 std::type_index(typeid(typename std::common_type<T, uint16_t>::type))),
+                  std::make_pair(std::type_index(typeid(uint32_t)),
+                                 std::type_index(typeid(typename std::common_type<T, uint32_t>::type))),
+                  std::make_pair(std::type_index(typeid(uint64_t)),
+                                 std::type_index(typeid(typename std::common_type<T, uint64_t>::type))),
+                  std::make_pair(std::type_index(typeid(int8_t)),
+                                 std::type_index(typeid(typename std::common_type<T, int8_t>::type))),
+                  std::make_pair(std::type_index(typeid(int16_t)),
+                                 std::type_index(typeid(typename std::common_type<T, int16_t>::type))),
+                  std::make_pair(std::type_index(typeid(int32_t)),
+                                 std::type_index(typeid(typename std::common_type<T, int32_t>::type))),
+                  std::make_pair(std::type_index(typeid(int64_t)),
+                                 std::type_index(typeid(typename std::common_type<T, int64_t>::type))),
+                  std::make_pair(std::type_index(typeid(float)),
+                                 std::type_index(typeid(typename std::common_type<T, float>::type))),
+                  std::make_pair(std::type_index(typeid(double)),
+                                 std::type_index(typeid(typename std::common_type<T, double>::type)))});
+  /*
   if (common_types.size() == 0) {
     common_types.insert(std::make_pair(std::type_index(typeid(uint8_t)),
                                        std::type_index(typeid(typename std::common_type<T, uint8_t>::type))));
@@ -97,7 +130,7 @@ static std::type_index get_common_type_index(std::type_index idx) {
                                        std::type_index(typeid(typename std::common_type<T, float>::type))));
     common_types.insert(std::make_pair(std::type_index(typeid(double)),
                                        std::type_index(typeid(typename std::common_type<T, double>::type))));
-  }
+                                       }*/
   auto it = common_types.find(idx);
   if (it == common_types.end()) {
     std::ostringstream ostr;
