@@ -219,9 +219,9 @@ namespace ParaText {
     }
 
     ColBasedPopulator get_column(size_t column_index) const {
-      if (!all_numeric_[column_index]) {
+      /*if (!all_numeric_[column_index]) {
         cache_cat_or_text_column(column_index);
-      }
+        }*/
       ColBasedPopulator populator(this, column_index);
       return populator;
     }
@@ -264,27 +264,22 @@ namespace ParaText {
     }
 
     std::type_index get_type_index(size_t column_index) const {
-      if (!all_numeric_[column_index]) {
-        cache_cat_or_text_column(column_index);
+      if (any_text_[column_index]) {
+        return std::type_index(typeid(std::string));
       }
-      if (cached_categorical_column_index_ == column_index) {
-        if (any_text_[column_index]) {
-          return std::type_index(typeid(std::string));
+      else {
+        const size_t num_levels = level_names_[column_index].size();
+        if (num_levels <= std::numeric_limits<uint8_t>::max()) {
+          return std::type_index(typeid(uint8_t));
+        }
+        else if (num_levels <= std::numeric_limits<uint16_t>::max()) {
+          return std::type_index(typeid(uint16_t));
+        }
+        else if (num_levels <= std::numeric_limits<uint32_t>::max()) {
+          return std::type_index(typeid(uint32_t));
         }
         else {
-          const size_t num_levels = level_names_[column_index].size();
-          if (num_levels <= std::numeric_limits<uint8_t>::max()) {
-            return std::type_index(typeid(uint8_t));
-          }
-          else if (num_levels <= std::numeric_limits<uint16_t>::max()) {
-            return std::type_index(typeid(uint16_t));
-          }
-          else if (num_levels <= std::numeric_limits<uint32_t>::max()) {
-            return std::type_index(typeid(uint32_t));
-          }
-          else {
-            return std::type_index(typeid(uint64_t));
-          }
+          return std::type_index(typeid(uint64_t));
         }
       }
       else {
@@ -293,28 +288,6 @@ namespace ParaText {
     }
 
   private:
-    void cache_cat_or_text_column(size_t column_index) const {
-      if (any_text_[column_index]) {
-        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-          column_chunks_[worker_id][column_index]->convert_to_text();
-        }
-      }
-      else {
-        cat_buffer_[column_index].clear();
-        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-          const auto &clist = column_chunks_[worker_id][column_index];
-          auto &keys = clist->get_cat_keys();
-          const size_t sz = clist->size();
-          for (size_t i = 0; i < sz; i++) {
-            const size_t other_level_index = clist->get<size_t, false>(i);
-            cat_buffer_[column_index].push_back(get_level_index(column_index, keys[other_level_index]));
-          }
-          clist->clear();
-        }
-        cached_categorical_column_index_ = column_index;
-      }
-    }
-
     void update_meta_data() {
       level_names_.clear();
       level_ids_.clear();
@@ -581,9 +554,6 @@ namespace ParaText {
         throw std::logic_error(ostr.str());
       }
       else {
-        if (cached_categorical_column_index_ != column_index) {
-          cache_cat_or_text_column(column_index);
-        }
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
           const auto &clist = column_chunks_[worker_id][column_index];
           const size_t sz = clist->size();
