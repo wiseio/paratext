@@ -194,9 +194,12 @@ namespace CSV {
 
     void clear() {
       number_data_.clear();
+      number_data_.shrink_to_fit();
       cat_data_.clear();
+      cat_data_.shrink_to_fit();
       cat_ids_.clear();
       cat_keys_.clear();
+      cat_keys_.shrink_to_fit();
     }
 
     size_t get_string(size_t idx) {

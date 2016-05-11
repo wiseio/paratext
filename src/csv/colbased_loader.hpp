@@ -298,15 +298,16 @@ namespace ParaText {
         }
       }
       else {
-        cat_buffer_.clear();
+        cat_buffer_[column_index].clear();
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
           const auto &clist = column_chunks_[worker_id][column_index];
           auto &keys = clist->get_cat_keys();
           const size_t sz = clist->size();
           for (size_t i = 0; i < sz; i++) {
             const size_t other_level_index = clist->get<size_t, false>(i);
-            cat_buffer_.push_back(get_level_index(column_index, keys[other_level_index]));
+            cat_buffer_[column_index].push_back(get_level_index(column_index, keys[other_level_index]));
           }
+          clist->clear();
         }
         cached_categorical_column_index_ = column_index;
       }
@@ -370,8 +371,19 @@ namespace ParaText {
             column_infos_[column_index].semantics = Semantics::TEXT;
           }
           else {
-            common_type_index_[column_index] = std::type_index(typeid(uint64_t));          
+            common_type_index_[column_index] = std::type_index(typeid(uint64_t));
             column_infos_[column_index].semantics = Semantics::CATEGORICAL;
+            cat_buffer_[column_index].clear();
+            for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+              const auto &clist = column_chunks_[worker_id][column_index];
+              auto &keys = clist->get_cat_keys();
+              const size_t sz = clist->size();
+              for (size_t i = 0; i < sz; i++) {
+                const size_t other_level_index = clist->get<size_t, false>(i);
+                cat_buffer_[column_index].push_back(get_level_index(column_index, keys[other_level_index]));
+              }
+              clist->clear();
+            }
           }
         }
       });
@@ -495,9 +507,6 @@ namespace ParaText {
         throw std::logic_error(ostr.str());
       }
       else {
-        if (cached_categorical_column_index_ != column_index) {
-          cache_cat_or_text_column(column_index);
-        }
         const size_t sz(cat_buffer_.size());
         for (size_t i = 0; i < sz; i++) {
           *it = cat_buffer_[i];
@@ -594,7 +603,7 @@ namespace ParaText {
     std::vector<ColumnInfo> column_infos_;
     std::vector<int> all_numeric_;
     std::vector<int> any_text_;
-    mutable std::vector<size_t> cat_buffer_;
+    mutable std::vector<std::vector<size_t> > cat_buffer_;
     std::vector<std::type_index> common_type_index_;
   };
 
