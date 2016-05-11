@@ -325,6 +325,7 @@ namespace ParaText {
       std::fill(all_numeric_.begin(), all_numeric_.end(), true);
       std::fill(any_text_.begin(), any_text_.end(), false);
       common_type_index_.resize(get_num_columns(), std::type_index(typeid(void)));
+      cat_buffer_.resize(get_num_columns());
       for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
         for (size_t column_index = 0; column_index < column_chunks_[worker_id].size(); column_index++) {
           Semantics sem = column_chunks_[worker_id][column_index]->get_semantics();
