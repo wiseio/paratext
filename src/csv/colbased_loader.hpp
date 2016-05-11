@@ -29,6 +29,7 @@
 #include "header_parser.hpp"
 #include "colbased_chunk.hpp"
 #include "colbased_worker.hpp"
+#include "parallel.hpp"
 
 #include <memory>
 #include <fstream>
@@ -331,7 +332,14 @@ namespace ParaText {
           size_[column_index] += column_chunks_[worker_id][column_index]->size();
         }
       }
+      std::vector<size_t> column_indices;
       for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
+        column_indices.push_back(column_index);
+      }
+      parallel_for_each(column_indices.begin(), column_indices.end(), column_chunks_[0].size(),
+                        [&](decltype(column_indices.begin()) it, size_t thread_id) mutable {
+        size_t column_index = *it;
+        (void)thread_id;
         if (all_numeric_[column_index]) {
           std::type_index idx = column_chunks_[0][column_index]->get_type_index();
           for (size_t worker_id = 1; worker_id < column_chunks_.size(); worker_id++) {
@@ -366,7 +374,7 @@ namespace ParaText {
             column_infos_[column_index].semantics = Semantics::CATEGORICAL;
           }
         }
-      }
+      });
       size_.resize(get_num_columns());
       std::fill(size_.begin(), size_.end(), 0);      
       for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
@@ -584,8 +592,8 @@ namespace ParaText {
     mutable size_t cached_categorical_column_index_;
     mutable std::vector<std::vector<std::shared_ptr<ColBasedChunk> > > column_chunks_;
     std::vector<ColumnInfo> column_infos_;
-    std::vector<bool> all_numeric_;
-    std::vector<bool> any_text_;
+    std::vector<int> all_numeric_;
+    std::vector<int> any_text_;
     mutable std::vector<size_t> cat_buffer_;
     std::vector<std::type_index> common_type_index_;
   };
