@@ -384,6 +384,7 @@ namespace ParaText {
                 cat_buffer_[column_index].push_back(get_level_index(column_index, keys[other_level_index]));
               }
               clist->clear();
+              column_chunks_[worker_id][column_index].reset();
             }
           }
         }
