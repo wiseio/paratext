@@ -326,6 +326,8 @@ namespace ParaText {
       std::fill(any_text_.begin(), any_text_.end(), false);
       common_type_index_.resize(get_num_columns(), std::type_index(typeid(void)));
       cat_buffer_.resize(get_num_columns());
+      size_.resize(get_num_columns());
+      std::fill(size_.begin(), size_.end(), 0);
       for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
         for (size_t column_index = 0; column_index < column_chunks_[worker_id].size(); column_index++) {
           Semantics sem = column_chunks_[worker_id][column_index]->get_semantics();
@@ -384,18 +386,14 @@ namespace ParaText {
                 cat_buffer_[column_index].push_back(get_level_index(column_index, keys[other_level_index]));
               }
               clist->clear();
-              column_chunks_[worker_id][column_index].reset();
             }
           }
         }
-      });
-      size_.resize(get_num_columns());
-      std::fill(size_.begin(), size_.end(), 0);      
-      for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-        for (size_t column_index = 0; column_index < column_chunks_[worker_id].size(); column_index++) {
-          size_[column_index] += column_chunks_[worker_id][column_index]->size();
+        size_[column_index] += column_chunks_[worker_id][column_index]->size();
+        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+          column_chunks_[worker_id][column_index].reset();
         }
-      }
+      });
     }
 
   private:
