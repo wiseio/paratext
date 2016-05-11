@@ -468,7 +468,7 @@ namespace ParaText {
   private:
     template <class OutputIterator, class T>
     typename std::enable_if<std::is_arithmetic<T>::value, void >::type copy_column_impl(size_t column_index, OutputIterator it) const {
-      if (all_numeric_[column_index]) {
+      if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
           const auto &clist = column_chunks_[worker_id][column_index];
           const size_t sz = clist->size();
@@ -477,7 +477,7 @@ namespace ParaText {
             it++;
           }
         }
-      } else if (any_text_[column_index]) {
+      } else if (column_infos_[column_index].semantics == Semantics::TEXT) {
         std::ostringstream ostr;
         ostr << "numeric output iterator expected for column " << column_index;
         throw std::logic_error(ostr.str());
@@ -493,12 +493,12 @@ namespace ParaText {
 
     template <class OutputIterator, class T>
     typename std::enable_if<std::is_same<T, std::string>::value, void>::type copy_column_impl(size_t column_index, OutputIterator it) const {
-      if (all_numeric_[column_index]) {
+      if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
         std::ostringstream ostr;
         ostr << "string output iterator expected for column " << column_index;
         throw std::logic_error(ostr.str());
-      } else if (any_text_[column_index]) {
-        std::cout << "^^^" << column_index << std::endl;
+      } else if (column_infos_[column_index].semantics == Semantics::TEXT) {
+        //std::cout << "^^^" << column_index << std::endl;
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
           const auto &clist = column_chunks_[worker_id][column_index];
           const size_t sz = clist->size();
@@ -517,12 +517,12 @@ namespace ParaText {
 
     template <class OutputIterator, class T>
     typename std::enable_if<std::is_same<T, std::string>::value, void>::type copy_column_and_forget_impl(size_t column_index, OutputIterator it) const {
-      if (all_numeric_[column_index]) {
+      if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
         std::ostringstream ostr;
         ostr << "string output iterator expected for column " << column_index;
         throw std::logic_error(ostr.str());
       }
-      else if (any_text_[column_index]) {      
+      else if (column_infos_[column_index].semantics == Semantics::TEXT) {
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
           const auto &clist = column_chunks_[worker_id][column_index];
           const size_t sz = clist->size();
@@ -541,29 +541,20 @@ namespace ParaText {
 
     template <class T>
     typename std::enable_if<std::is_arithmetic<T>::value, void >::type copy_column_into_buffer_impl(size_t column_index, T *buffer) const {
-      if (all_numeric_[column_index]) {
+      if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
           const auto &clist = column_chunks_[worker_id][column_index];
           const size_t sz = clist->size();
           clist->copy_numeric_into(buffer);
           buffer += sz;
         }
-      } else if (any_text_[column_index]) {
+      } else if (column_infos_[column_index].semantics == Semantics::TEXT) {
         std::ostringstream ostr;
         ostr << "numeric output iterator expected for column " << column_index;
         throw std::logic_error(ostr.str());
       }
       else {
-        const size_t sz(cat_buffer_[column_index].size());
-        for (size_t i = 0; i < sz; i++) {
-          std::copy(cat_buffer_[column_index].begin(), cat_buffer_[column_index].end(), buffer);
-        }
-        /*for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-          const auto &clist = column_chunks_[worker_id][column_index];
-          const size_t sz = clist->size();
-          clist->copy_cat_into(buffer);
-          buffer += sz;
-          }*/
+        std::copy(cat_buffer_[column_index].begin(), cat_buffer_[column_index].end(), buffer);
       }
     }
 
