@@ -255,6 +255,8 @@ namespace ParaText {
       for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
         column_chunks_[worker_id][column_index].reset();
       }
+      cat_buffer_[column_index].clear();
+      cat_buffer_[column_index].shrink_to_fit();
     }
 
     size_t get_element_type_index(size_t column_index) const {
@@ -389,9 +391,8 @@ namespace ParaText {
             }
           }
         }
-        size_[column_index] += column_chunks_[worker_id][column_index]->size();
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-          for (size_t column_index = 0; column_index < column_chunks_[worker_id].size(); column_index++) {
+          if (column_infos_[column_index].semantics == Semantics::CATEGORICAL) {
             column_chunks_[worker_id][column_index].reset();
           }
         }
