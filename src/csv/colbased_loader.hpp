@@ -391,7 +391,9 @@ namespace ParaText {
         }
         size_[column_index] += column_chunks_[worker_id][column_index]->size();
         for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-          column_chunks_[worker_id][column_index].reset();
+          for (size_t column_index = 0; column_index < column_chunks_[worker_id].size(); column_index++) {
+            column_chunks_[worker_id][column_index].reset();
+          }
         }
       });
     }
