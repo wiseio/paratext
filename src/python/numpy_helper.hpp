@@ -258,7 +258,31 @@ struct derived_insert_populator_impl<Populator, std::string> : public base_inser
 
 template <class Populator>
 PyObject *build_populator(const Populator &populator) {
-  static std::unordered_map<std::type_index, std::shared_ptr<base_insert_populator_impl<Populator>>> populators;
+  static std::unordered_map<std::type_index, std::shared_ptr<base_insert_populator_impl<Populator>>>
+    populators({std::make_pair(std::type_index(typeid(uint8_t)),
+                               std::make_shared<derived_insert_populator_impl<Populator, uint8_t>>()),
+          std::make_pair(std::type_index(typeid(int8_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, int8_t>>()),
+          std::make_pair(std::type_index(typeid(uint16_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, uint16_t>>()),
+          std::make_pair(std::type_index(typeid(int16_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, int16_t>>()),
+          std::make_pair(std::type_index(typeid(uint32_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, uint32_t>>()),
+          std::make_pair(std::type_index(typeid(int32_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, int32_t>>()),
+          std::make_pair(std::type_index(typeid(uint64_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, uint64_t>>()),
+          std::make_pair(std::type_index(typeid(int64_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, int64_t>>()),
+          std::make_pair(std::type_index(typeid(float)),
+                         std::make_shared<derived_insert_populator_impl<Populator, float>>()),
+          std::make_pair(std::type_index(typeid(double)),
+                         std::make_shared<derived_insert_populator_impl<Populator, double>>()),
+          std::make_pair(std::type_index(typeid(std::string)),
+                         std::make_shared<derived_insert_populator_impl<Populator, std::string>>())
+          });
+  /*
   if (populators.size() == 0) {
     populators.insert(std::make_pair(std::type_index(typeid(uint8_t)),
                               std::make_shared<derived_insert_populator_impl<Populator, uint8_t>>()));
@@ -288,6 +312,7 @@ PyObject *build_populator(const Populator &populator) {
     populators.insert(std::make_pair(std::type_index(typeid(std::string)),
                                      std::make_shared<derived_insert_populator_impl<Populator, std::string>>()));
   }
+  */
   auto it = populators.find(populator.get_type_index());
   if (it == populators.end()) {
     throw std::logic_error(std::string("cannot process type"));
