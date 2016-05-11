@@ -264,10 +264,10 @@ namespace ParaText {
     }
 
     std::type_index get_type_index(size_t column_index) const {
-      if (any_text_[column_index]) {
+      if (column_infos_[column_index].semantics == Semantics::TEXT) {
         return std::type_index(typeid(std::string));
       }
-      else {
+      else if (column_infos_[column_index].semantics == Semantics::CATEGORICAL) {
         const size_t num_levels = level_names_[column_index].size();
         if (num_levels <= std::numeric_limits<uint8_t>::max()) {
           return std::type_index(typeid(uint8_t));
