@@ -33,6 +33,7 @@
 
 #include <memory>
 #include <fstream>
+#include <mutex>
 
 namespace ParaText {
 
@@ -315,61 +316,72 @@ namespace ParaText {
       for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
         column_indices.push_back(column_index);
       }
+      std::exception_ptr thread_exception;
+      std::mutex         thread_exception_lock;
       parallel_for_each(column_indices.begin(), column_indices.end(), column_chunks_[0].size(),
                         [&](decltype(column_indices.begin()) it, size_t thread_id) mutable {
-        size_t column_index = *it;
-        (void)thread_id;
-        if (all_numeric_[column_index]) {
-          std::type_index idx = column_chunks_[0][column_index]->get_type_index();
-          for (size_t worker_id = 1; worker_id < column_chunks_.size(); worker_id++) {
-            idx = column_chunks_[worker_id][column_index]->get_common_type_index(idx);
-          }
-          common_type_index_[column_index] = idx;
-          column_infos_[column_index].semantics = Semantics::NUMERIC;
-        }
-        else {
-          /* If they're not all numeric, convert to categorical. Some may become text. */
-          /*convert_column_to_cat_or_text(column_index);
-          for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-            any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
-            }*/
-          
-          for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-            column_chunks_[worker_id][column_index]->convert_to_cat_or_text();
-            any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
-          }
-          /* If any became text or there were text chunks, convert all chunks for the
-             column to raw text. */
-          if (any_text_[column_index]) {
-            //convert_column_to_text(column_index);           
-            for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-              column_chunks_[worker_id][column_index]->convert_to_text();
+        try {
+          size_t column_index = *it;
+          (void)thread_id;
+          if (all_numeric_[column_index]) {
+            std::type_index idx = column_chunks_[0][column_index]->get_type_index();
+            for (size_t worker_id = 1; worker_id < column_chunks_.size(); worker_id++) {
+              idx = column_chunks_[worker_id][column_index]->get_common_type_index(idx);
             }
-            common_type_index_[column_index] = std::type_index(typeid(std::string));
-            column_infos_[column_index].semantics = Semantics::TEXT;
+            common_type_index_[column_index] = idx;
+            column_infos_[column_index].semantics = Semantics::NUMERIC;
           }
           else {
-            common_type_index_[column_index] = std::type_index(typeid(uint64_t));
-            column_infos_[column_index].semantics = Semantics::CATEGORICAL;
-            cat_buffer_[column_index].clear();
+            /* If they're not all numeric, convert to categorical. Some may become text. */
+            /*convert_column_to_cat_or_text(column_index);
+              for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+              any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
+              }*/
+            
             for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-              const auto &clist = column_chunks_[worker_id][column_index];
-              auto &keys = clist->get_cat_keys();
-              const size_t sz = clist->size();
-              for (size_t i = 0; i < sz; i++) {
-                const size_t other_level_index = clist->get<size_t, false>(i);
-                cat_buffer_[column_index].push_back(get_level_index(column_index, keys[other_level_index]));
+              column_chunks_[worker_id][column_index]->convert_to_cat_or_text();
+              any_text_[column_index] = any_text_[column_index] || column_chunks_[worker_id][column_index]->get_semantics() == Semantics::TEXT;
+            }
+            /* If any became text or there were text chunks, convert all chunks for the
+               column to raw text. */
+            if (any_text_[column_index]) {
+              //convert_column_to_text(column_index);           
+              for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+                column_chunks_[worker_id][column_index]->convert_to_text();
               }
-              clist->clear();
+              common_type_index_[column_index] = std::type_index(typeid(std::string));
+              column_infos_[column_index].semantics = Semantics::TEXT;
+            }
+            else {
+              common_type_index_[column_index] = std::type_index(typeid(uint64_t));
+              column_infos_[column_index].semantics = Semantics::CATEGORICAL;
+              cat_buffer_[column_index].clear();
+              for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+                const auto &clist = column_chunks_[worker_id][column_index];
+                auto &keys = clist->get_cat_keys();
+                const size_t sz = clist->size();
+                for (size_t i = 0; i < sz; i++) {
+                  const size_t other_level_index = clist->get<size_t, false>(i);
+                  cat_buffer_[column_index].push_back(get_level_index(column_index, keys[other_level_index]));
+                }
+                clist->clear();
+              }
+            }
+          }
+          for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+            if (column_infos_[column_index].semantics == Semantics::CATEGORICAL) {
+              column_chunks_[worker_id][column_index].reset();
             }
           }
         }
-        for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-          if (column_infos_[column_index].semantics == Semantics::CATEGORICAL) {
-            column_chunks_[worker_id][column_index].reset();
-          }
+        catch (...) {
+          std::unique_lock<std::mutex> guard(thread_exception_lock);
+          thread_exception = std::current_exception();
         }
       });
+      if (thread_exception) {
+        std::rethrow_exception(thread_exception);
+      }
     }
 
   private:
