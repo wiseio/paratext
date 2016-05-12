@@ -48,6 +48,10 @@
   $result = (PyObject*)::build_array<std::vector<double>>($1);
 }
 
+%typemap(out) std::vector<size_t> {
+  $result = (PyObject*)::build_array<std::vector<size_t>>($1);
+}
+
 %typemap(out) const std::vector<std::string> & {
   { auto range = std::make_pair($1->begin(), $1->end());
    $result = (PyObject*)::build_array_from_range(range);

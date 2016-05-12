@@ -288,14 +288,14 @@ namespace ParaText {
       }
     }
 
-    std::vector<double> compute_sums(size_t num_threads) {
+    std::vector<size_t> compute_sums(size_t num_threads) {
       std::vector<size_t> column_indices;
       std::exception_ptr thread_exception;
       std::mutex         thread_exception_lock;
       for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
         column_indices.push_back(column_index);
       }
-      std::vector<double> cached_sums(get_num_columns(), 0.0);
+      std::vector<size_t> cached_sums(get_num_columns(), 0.0);
       for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
         column_indices.push_back(column_index);
       }
@@ -307,7 +307,7 @@ namespace ParaText {
 
           if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
             for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-              cached_sums[column_index] += column_chunks_[worker_id][column_index]->get_number_sum<double>();
+              cached_sums[column_index] += column_chunks_[worker_id][column_index]->get_number_sum<size_t>();
             }
           } else if (column_infos_[column_index].semantics == Semantics::TEXT) {
             for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
