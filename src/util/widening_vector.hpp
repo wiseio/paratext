@@ -297,11 +297,8 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
 
   template <class T>
   T get_sum() const {
-    T sum = 0.0;
-    for (size_t i = 0; i < values_.size(); i++) {
-      sum += values_[i];
-    }
-    return sum;
+    auto begin = values_.begin();
+    return std::accumulate<decltype(begin)>(values_.begin(), values_.end(), (T)0);
   }
 
 private:
@@ -356,12 +353,9 @@ struct widening_vector_impl<1, Head> : public widening_vector_impl_crtp<widening
   widening_vector_impl() {}
 
   template <class T>
-  T get_sum() const {
-    T sum = 0.0;
-    for (size_t i = 0; i < values_.size(); i++) {
-      sum += values_[i];
-    }
-    return sum;
+  inline T get_sum() const {
+    auto begin = values_.begin();
+    return std::accumulate<decltype(begin)>(values_.begin(), values_.end(), (T)0);
   }
 
   template <class T>
@@ -487,7 +481,7 @@ public:
   }
 
   template <class Q>
-  Q get_sum() const {
+  inline Q get_sum() const {
     return current_->get_sum<Q>();
   }
 
