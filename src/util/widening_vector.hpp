@@ -133,6 +133,16 @@ struct widening_vector_impl_base {
   virtual void copy_into(int64_t* array) const = 0;
   virtual void copy_into(float* array) const = 0;
   virtual void copy_into(double* array) const = 0;
+
+  template <class T>
+  T get_sum() const {
+    return get_sum_impl(T());
+  }
+
+  virtual double get_sum_impl(double) const = 0;
+  virtual float get_sum_impl(float) const = 0;
+  virtual size_t get_sum_impl(size_t) const = 0;
+  virtual long get_sum_impl(long) const = 0;
 };
 
 template <class WVT>
@@ -150,6 +160,11 @@ struct widening_vector_impl_crtp : public widening_vector_impl_base {
   virtual void copy_into(int64_t* array) const { ((WVT*)this)->copy_into_impl(array); }
   virtual void copy_into(float* array) const { ((WVT*)this)->copy_into_impl(array); }
   virtual void copy_into(double* array) const { ((WVT*)this)->copy_into_impl(array); }
+
+  virtual double get_sum_impl(double) const { return ((WVT*)this)->get_sum<double>(); }
+  virtual float get_sum_impl(float) const { return ((WVT*)this)->get_sum<float>(); }
+  virtual size_t get_sum_impl(size_t) const { return ((WVT*)this)->get_sum<size_t>(); }
+  virtual long get_sum_impl(long) const { return ((WVT*)this)->get_sum<long>(); }
 };
 
 /*
@@ -280,6 +295,11 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
     std::copy(values_.begin(), values_.end(), output);
   }
 
+  template <class T>
+  T get_sum() const {
+    return std::accumulate<decltype(values_.begin()), T>(values_.begin(), values_.end(), (T)0);
+  }
+
 private:
 
   /*
@@ -330,6 +350,11 @@ template <class Head>
 struct widening_vector_impl<1, Head> : public widening_vector_impl_crtp<widening_vector_impl<1, Head>> {
 
   widening_vector_impl() {}
+
+  template <class T>
+  T get_sum() const {
+    return std::accumulate<decltype(values_.begin()), T>(values_.begin(), values_.end(), (T)0);
+  }
 
   template <class T>
   T get(size_t i) const {
@@ -451,6 +476,11 @@ public:
   template <class Q>
   typename std::enable_if<!std::is_floating_point<Q>::value, Q>::type get(size_t i) const {
     return (Q)current_->v_get_long(i);
+  }
+
+  template <class Q>
+  Q get_sum() const {
+    return current_->get_sum<Q>();
   }
 
   void clear() {

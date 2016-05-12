@@ -279,6 +279,19 @@ namespace CSV {
       cat_data_.copy_into(out);
     }
 
+    size_t get_text_length_sum() const {
+      size_t sum = 0;
+      for (size_t i = 0; i < text_data_.size(); i++) {
+        sum += text_data_[i].size();
+      }
+      return sum;
+    }
+
+    template <class T>
+    T get_number_sum() const {
+      return number_data_.get_sum<T>();
+    }
+
   private:
     std::string column_name_;
     widening_vector_dynamic<uint8_t, int8_t, int16_t, int32_t, int64_t, float> number_data_;

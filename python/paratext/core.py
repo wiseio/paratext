@@ -309,7 +309,7 @@ def load_csv_to_pandas(filename, *args, **kwargs):
     return pandas.DataFrame.from_items(load_csv_to_expanded_columns(filename, *args, **kwargs))
 
 @_docstring_parameter(_csv_load_params_doc)
-def baseline_average_columns(filename, *args, **kwargs):
+def baseline_average_columns(filename, type_check=False, *args, **kwargs):
     """
     Computes the sum of numeric columns in a numeric-only CSV file.
 
@@ -321,6 +321,10 @@ def baseline_average_columns(filename, *args, **kwargs):
 
     Parameters
     ----------
+    type_check : bool
+
+         Whether to perform type checking.
+
     {0}
 
     Returns

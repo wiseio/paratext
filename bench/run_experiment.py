@@ -55,13 +55,11 @@ def sum_dataframe(df):
             try:
                 s[key] = df[key].apply(lambda x: len(x)).sum()
             except:
-                # Too slow
-                #s[key] = df[key].sum()
-                s[key] = df[key].values.sum()
+                try:
+                    s[key] = df[key].values.sum()
+                except:
+                    s[key] = np.nan
         else:
-            # Too slow
-            #s[key] = df[key].sum()
-            # Faster
             s[key] = df[key].values.sum()
     return s
 

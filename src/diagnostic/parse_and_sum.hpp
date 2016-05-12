@@ -40,6 +40,7 @@ namespace ParaText {
 
   namespace Diagnostic {
 
+template <bool TypeCheck>
 class ParseAndSumWorker {
 public:
   ParseAndSumWorker(size_t chunk_start, size_t chunk_end, size_t block_size, size_t num_columns)
@@ -72,7 +73,7 @@ public:
     size_t current = chunk_start_;
     sums_.resize(num_columns_);
     std::fill(sums_.begin(), sums_.end(), 0.0);
-    size_t column_index = 0;
+    column_index_ = 0;
     num_lines_ = 0;
     char token[64];
     size_t j = 0;
@@ -84,14 +85,14 @@ public:
       }
       for (size_t i = 0; i < nread; i++) {
         if (buf[i] == '\n') {   
-          sums_[column_index] += bsd_strtod(token, token + j);
-          column_index = 0;
+          sums_[column_index_] += parse_token<TypeCheck>(token, token + j);
+          column_index_ = 0;
           num_lines_++;
           j = 0;
         }
         else if (buf[i] == ',') {
-          sums_[column_index] += bsd_strtod(token, token + j);
-          column_index++;
+          sums_[column_index_] += parse_token<TypeCheck>(token, token + j);
+          column_index_++;
           j = 0;
         }
         else {
@@ -101,10 +102,10 @@ public:
       current += nread;
     }
     if (j > 0) {
-      sums_[column_index] += bsd_strtod(token, token + j);
+      sums_[column_index_] += parse_token<TypeCheck>(token, token + j);
       j = 0;
     }
-    if (column_index > 0) {
+    if (column_index_ > 0) {
       num_lines_++;
     }
   }
@@ -117,12 +118,48 @@ public:
     return num_lines_;
   }
 
+  // No type checking
+  template <bool TypeCheck_, class Iterator>
+  inline typename std::enable_if<!TypeCheck_, double>::type parse_token(Iterator begin, Iterator end) const {
+    return bsd_strtod(begin, end);
+  }
+
+  // Type checking only for numbers.
+  template <bool TypeCheck_, class Iterator>
+  inline typename std::enable_if<TypeCheck_, double>::type parse_token(Iterator begin, Iterator end) const {
+    Iterator it = begin;
+    for (; it != end && isspace(*it); it++) {}
+    if (it != end) {
+      if (*it == '?' && std::distance(it, end) == 1) {
+        return std::numeric_limits<float>::quiet_NaN();
+      }
+      else if (std::distance(it, end) == 3 &&
+               ((*it == 'n' || *it == 'N'))
+               && ((*(it+1) == 'a' || *(it+1) == 'A'))
+               && ((*(it+2) == 'n' || *(it+2) == 'N'))) {
+        return std::numeric_limits<float>::quiet_NaN();
+      }
+      else {
+        if (*it == '-') { it++; }
+        for (; it != end && isdigit(*it); it++) {}
+        if (it != end && (*it == '.' || *it == 'E' || *it == 'e')) {
+          return bsd_strtod(it, end);
+        }
+        else {
+          return (double)fast_atoi<long>(it, end);
+        }
+      }
+    }
+    return (double)std::distance(it, end);
+  }
+
 private:
   size_t chunk_start_;
   size_t chunk_end_;
   size_t block_size_;
   size_t num_columns_;
   size_t num_lines_;
+  size_t column_index_;
   std::vector<float> sums_;
   std::exception_ptr thread_exception_;
 };
@@ -133,9 +170,21 @@ private:
 
     virtual ~ParseAndSum() {}
 
-    size_t load(const std::string &filename, const ParseParams &params) {
+    size_t load(const std::string &filename, const ParseParams &params, bool type_check) {
+      size_t retval = 0;
+      if (type_check) {
+        retval = load_impl<true>(filename, params);
+      }
+      else {
+        retval = load_impl<false>(filename, params);
+      }
+      return retval;
+    }
+
+    template <bool TypeCheck>
+    size_t load_impl(const std::string &filename, const ParseParams &params) {
       std::vector<std::thread> threads;
-      std::vector<std::shared_ptr<ParseAndSumWorker> > workers;
+      std::vector<std::shared_ptr<ParseAndSumWorker<TypeCheck> > > workers;
       header_parser_.open(filename, params.no_header);
       std::exception_ptr thread_exception;
       if (header_parser_.has_header()) {
@@ -151,8 +200,8 @@ private:
         if (start_of_chunk == end_of_chunk) {
           continue;
         }
-        workers.push_back(std::make_shared<ParseAndSumWorker>(start_of_chunk, end_of_chunk, params.block_size, header_parser_.get_num_columns()));
-        threads.emplace_back(&ParseAndSumWorker::parse,
+        workers.push_back(std::make_shared<ParseAndSumWorker<TypeCheck> >(start_of_chunk, end_of_chunk, params.block_size, header_parser_.get_num_columns()));
+        threads.emplace_back(&ParseAndSumWorker<TypeCheck>::parse,
                              workers.back(),
                              filename);
       }

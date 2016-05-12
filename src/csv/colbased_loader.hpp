@@ -288,6 +288,50 @@ namespace ParaText {
       }
     }
 
+    std::vector<double> compute_sums() {
+      std::vector<size_t> column_indices;
+      std::exception_ptr thread_exception;
+      std::mutex         thread_exception_lock;
+      for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
+        column_indices.push_back(column_index);
+      }
+      std::vector<double> cached_sums(get_num_columns(), 0.0);
+      for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
+        column_indices.push_back(column_index);
+      }
+      parallel_for_each(column_indices.begin(), column_indices.end(), column_chunks_[0].size(),
+                        [&](decltype(column_indices.begin()) it, size_t thread_id) mutable {
+        (void)thread_id;
+        try {
+          size_t column_index = *it;
+
+          if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
+            for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+              cached_sums[column_index] += column_chunks_[worker_id][column_index]->get_number_sum<double>();
+            }
+          } else if (column_infos_[column_index].semantics == Semantics::TEXT) {
+            for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
+              cached_sums[column_index] += column_chunks_[worker_id][column_index]->get_text_length_sum();
+            }
+          }
+          else {
+            const size_t sz(cat_buffer_[column_index].size());
+            for (size_t i = 0; i < sz; i++) {
+              cached_sums[column_index] += level_names_[column_index][cat_buffer_[column_index][i]].size();
+            }
+          }
+        }
+        catch (...) {
+          std::unique_lock<std::mutex> guard(thread_exception_lock);
+          thread_exception = std::current_exception();
+        }
+      });
+      if (thread_exception) {
+        std::rethrow_exception(thread_exception);
+      }
+      return cached_sums;
+    }
+
   private:
     void update_meta_data() {
       level_names_.clear();
@@ -436,44 +480,6 @@ namespace ParaText {
       // We're now outside the parallel region.
       if (thread_exception) {
         std::rethrow_exception(thread_exception);
-      }
-    }
-
-  private:
-    void convert_column_to_cat_or_text(size_t column_index) {
-      std::vector<std::thread> threads;
-      std::vector<std::shared_ptr<ColBasedParseWorker<ColBasedChunk> > > workers;
-      std::exception_ptr thread_exception;
-      for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-        workers.push_back(std::make_shared<ColBasedParseWorker<ColBasedChunk> >(column_chunks_[worker_id]));
-        threads.emplace_back(&ColBasedParseWorker<ColBasedChunk>::convert_to_cat_or_text,
-                             workers.back(),
-                             column_index);
-      }
-      for (size_t thread_id = 0; thread_id < threads.size(); thread_id++) {
-        threads[thread_id].join();
-
-        if (!thread_exception) {
-          thread_exception = workers[thread_id]->get_exception();
-        }
-      }
-    }
-
-    void convert_column_to_text(size_t column_index) {
-      std::vector<std::thread> threads;
-      std::vector<std::shared_ptr<ColBasedParseWorker<ColBasedChunk> > > workers;
-      std::exception_ptr thread_exception;
-      for (size_t worker_id = 0; worker_id < column_chunks_.size(); worker_id++) {
-        workers.push_back(std::make_shared<ColBasedParseWorker<ColBasedChunk> >(column_chunks_[worker_id]));
-        threads.emplace_back(&ColBasedParseWorker<ColBasedChunk>::convert_to_text,
-                             workers.back(),
-                             column_index);
-      }
-      for (size_t thread_id = 0; thread_id < threads.size(); thread_id++) {
-        threads[thread_id].join();
-        if (!thread_exception) {
-          thread_exception = workers[thread_id]->get_exception();
-        }
       }
     }
 
