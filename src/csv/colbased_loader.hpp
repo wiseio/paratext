@@ -288,7 +288,7 @@ namespace ParaText {
       }
     }
 
-    std::vector<double> compute_sums() {
+    std::vector<double> compute_sums(size_t num_threads) {
       std::vector<size_t> column_indices;
       std::exception_ptr thread_exception;
       std::mutex         thread_exception_lock;
@@ -299,7 +299,7 @@ namespace ParaText {
       for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
         column_indices.push_back(column_index);
       }
-      parallel_for_each(column_indices.begin(), column_indices.end(), column_chunks_[0].size(),
+      parallel_for_each(column_indices.begin(), column_indices.end(), num_threads,
                         [&](decltype(column_indices.begin()) it, size_t thread_id) mutable {
         (void)thread_id;
         try {
