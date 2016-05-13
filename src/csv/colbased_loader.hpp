@@ -353,14 +353,29 @@ namespace ParaText {
           size_[column_index] += column_chunks_[worker_id][column_index]->size();
         }
       }
+      bool all_columns_numeric = true;
+      for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
+        all_columns_numeric = all_columns_numeric && all_numeric_[column_index];
+      }
       std::vector<size_t> column_indices;
       for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
         column_indices.push_back(column_index);
       }
-      std::exception_ptr thread_exception;
-      std::mutex         thread_exception_lock;
-      parallel_for_each(column_indices.begin(), column_indices.end(), column_chunks_[0].size(),
-                        [&](decltype(column_indices.begin()) it, size_t thread_id) mutable {
+      if (all_columns_numeric) {
+        for (size_t column_index = 0; column_index < column_chunks_[0].size(); column_index++) {
+          std::type_index idx = column_chunks_[0][column_index]->get_type_index();
+          for (size_t worker_id = 1; worker_id < column_chunks_.size(); worker_id++) {
+            idx = column_chunks_[worker_id][column_index]->get_common_type_index(idx);
+          }
+          common_type_index_[column_index] = idx;
+          column_infos_[column_index].semantics = Semantics::NUMERIC;
+        }
+      }
+      else {
+        std::exception_ptr thread_exception;
+        std::mutex         thread_exception_lock;
+        parallel_for_each(column_indices.begin(), column_indices.end(), column_chunks_[0].size(),
+                          [&](decltype(column_indices.begin()) it, size_t thread_id) mutable {
         try {
           size_t column_index = *it;
           (void)thread_id;
@@ -419,9 +434,10 @@ namespace ParaText {
           std::unique_lock<std::mutex> guard(thread_exception_lock);
           thread_exception = std::current_exception();
         }
-      });
-      if (thread_exception) {
-        std::rethrow_exception(thread_exception);
+        });
+        if (thread_exception) {
+          std::rethrow_exception(thread_exception);
+        }
       }
     }
 
