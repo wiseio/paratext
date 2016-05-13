@@ -161,10 +161,10 @@ struct widening_vector_impl_crtp : public widening_vector_impl_base {
   virtual void copy_into(float* array) const { ((WVT*)this)->copy_into_impl(array); }
   virtual void copy_into(double* array) const { ((WVT*)this)->copy_into_impl(array); }
 
-  virtual double get_sum_impl(double) const { return ((WVT*)this)->get_sum<double>(); }
-  virtual float get_sum_impl(float) const { return ((WVT*)this)->get_sum<float>(); }
-  virtual size_t get_sum_impl(size_t) const { return ((WVT*)this)->get_sum<size_t>(); }
-  virtual long get_sum_impl(long) const { return ((WVT*)this)->get_sum<long>(); }
+  virtual double get_sum_impl(double) const { return ((WVT*)this)->template get_sum<double>(); }
+  virtual float get_sum_impl(float) const { return ((WVT*)this)->template get_sum<float>(); }
+  virtual size_t get_sum_impl(size_t) const { return ((WVT*)this)->template get_sum<size_t>(); }
+  virtual long get_sum_impl(long) const { return ((WVT*)this)->template get_sum<long>(); }
 };
 
 /*
