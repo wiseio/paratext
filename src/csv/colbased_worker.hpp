@@ -27,8 +27,6 @@
 #include "util/strings.hpp"
 #include "util/widening_vector.hpp"
 
-#include <boost/lexical_cast.hpp>
-
 #include <fstream>
 #include <exception>
 #include <stdexcept>
@@ -321,12 +319,10 @@ public:
           }
         }
       if (integer_possible) {
-        //handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
-        handlers_[column_index_]->process_integer(boost::lexical_cast<long>(boost::make_iterator_range(token_.begin(), token_.end())));
+        handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
       }
       else if (float_possible || exp_possible) {
-        //handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
-        handlers_[column_index_]->process_integer(boost::lexical_cast<float>(boost::make_iterator_range(token_.begin(), token_.end())));
+        handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
       }
       else {
         handlers_[column_index_]->process_categorical(token_.begin(), token_.end());
