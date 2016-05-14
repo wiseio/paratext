@@ -58,7 +58,24 @@ datasets = {"mnist":
              "npy": "floats.npy",
              "no_header": False,
              "pickle": "floats.pkl",
+             "to_df": True},
+            "floats2":
+            {"csv": "floats2.csv",
+             "feather": "floats2.feather",
+             "hdf5": "floats2.hdf5",
+             "npy": "floats2.npy",
+             "no_header": False,
+             "pickle": "floats2.pkl",
              "to_df": True}}
+
+print "available datasets: ", datasets.keys()
+restrict_keys = raw_input("enter comma-delimited list of datasets to generate experiment json [enter for all]: ")
+
+if restrict_keys != "":
+    restrict_keys = set(restrict_keys.split(","))
+    for key in datasets.keys():
+        if key not in restrict_keys:
+            datasets.pop(key)
 
 for name, attr in datasets.iteritems():
     if "csv" in attr:
