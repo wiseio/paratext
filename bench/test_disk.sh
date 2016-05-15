@@ -6,7 +6,7 @@ log="$2"
 
 for i in $(seq 1 1000);
 do
-  disk_results="$(sudo bash -c \"hdparm -Tt ${device} | grep Timing | sed -e 's/.*=//g' | sed 's/ MB\/sec//g'\")"
+  disk_results="$(sudo bash -c "hdparm -Tt ${device} | grep Timing | sed -e 's/.*=//g' | sed -e 's/ MB\/sec//g'")"
   disk_A="$(echo $disk_results | cut -d' ' -f1)"
   disk_B="$(echo $disk_results | cut -d' ' -f2)"
   sudo bash -c "free && sync && echo 3 > /proc/sys/vm/drop_caches && free"
