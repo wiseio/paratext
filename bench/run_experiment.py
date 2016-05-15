@@ -157,6 +157,7 @@ def bench_disk_to_mem_baseline(params):
 
 def bench_average_columns_baseline(params):
     avg = paratext.baseline_average_columns(params["filename"],
+                                            type_check=params.get("type_check", True),
                                             block_size=params.get("block_size", 32768),
                                             num_threads=params.get("num_threads", 1),
                                             no_header=params.get("no_header", False),
@@ -540,6 +541,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-

@@ -34,6 +34,7 @@ datasets = {"mnist":
              "no_header": False,
              "run_pyspark": False,
              "max_level_name_length": 0,
+             "contains_text": True,
              "to_df": True},
             "messy2":
             {"csv": "messy2.csv",
@@ -43,6 +44,7 @@ datasets = {"mnist":
              "no_header": False,
              "run_pyspark": False,
              "max_level_name_length": 0,
+             "contains_text": True,
              "to_df": True},
             "car":
             {"csv": "car.csv",
@@ -50,6 +52,7 @@ datasets = {"mnist":
              "pickle": "car.pkl",
              "qnl": False,
              "no_header": False,
+             "contains_text": True,
              "to_df": True},
             "floats":
             {"csv": "floats.csv",
@@ -100,10 +103,21 @@ for name, attr in datasets.iteritems():
         for disk_state in ["cold", "warm"]:
             for num_threads in [1,4,8,12,16,20,24,28,32]:
                 for block_size in [32768]:
-                    cmds = ["disk-to-mem", "countnl", "paratext"]
-                    if attr.get("number_only", False):
-                        cmds.append("avgcols")
-                    for cmd in cmds:
+                    if not attr.get("contains_text", False):
+                        for type_check in [True, False]:
+                            params = {"cmd": "avgcols",
+                                      "filename": attr["csv"],
+                                      "no_header": attr.get("no_header", True),
+                                      "allow_quoted_newlines": attr.get("qnl", False),
+                                      "num_threads": num_threads,
+                                      "disk_state": disk_state,
+                                      "block_size": block_size,
+                                      "to_df": True,
+                                      "sum_after": True,
+                                      "type_check": type_check,
+                                      "log": str(len(all_params)) + ".log"}
+                            all_params.append(params)
+                    for cmd in ["disk-to-mem", "countnl", "paratext"]:
                         params = {"cmd": cmd,
                                   "filename": attr["csv"],
                                   "no_header": attr.get("no_header", True),

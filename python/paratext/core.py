@@ -334,7 +334,7 @@ def baseline_average_columns(filename, type_check=False, *args, **kwargs):
     """
     params = _get_params(*args, **kwargs)
     summer = pti.ParseAndSum();
-    summer.load(filename, params)
+    summer.load(filename, params, type_check)
     d = {summer.get_column_name(i): summer.get_avg(i) for i in xrange(0, summer.get_num_columns())}
     return d
 
