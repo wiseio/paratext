@@ -143,14 +143,14 @@ public:
         if (*it == '-') { it++; }
         for (; it != end && isdigit(*it); it++) {}
         if (it != end && (*it == '.' || *it == 'E' || *it == 'e')) {
-          return bsd_strtod(it, end);
+          return bsd_strtod(begin, end);
         }
         else {
-          return (double)fast_atoi<long>(it, end);
+          return (double)fast_atoi<long>(begin, end);
         }
       }
     }
-    return (double)std::distance(it, end);
+    return (double)std::distance(begin, end);
   }
 
 private:
