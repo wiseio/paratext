@@ -113,6 +113,7 @@ def read_spark_csv(sc, sqlContext, filename, no_header=False):
     else:
         header = "true"
     sdf = sqlContext.read.format('com.databricks.spark.csv').option('header', header).option('inferschema', 'true').load(filename)
+    sdf.cache()
     return sdf
 
 def dict_frame_to_data_frame(d, levels):
@@ -396,6 +397,7 @@ def bench_pyspark(params):
     pretransfer_mem = '?'
     posttransfer_mem = '?'
     to_df_mem = '?'
+    spark_params = {k:v for k,v in sc._conf.getAll()}
     if params.get("to_df", False):
         pretransfer_mem = memory_usage_resource() + memory_usage_psutil("java")
         transfer_tic = time.time();
@@ -407,13 +409,17 @@ def bench_pyspark(params):
         to_df_time = to_df_toc - to_df_tic
         to_df_mem = memory_usage_resource() + memory_usage_psutil("java")
         posttransfer_mem = to_df_mem
-    return {"sum_time": sum_time, 
-            "load_time": load_time,
-            "preload_java_mem": preload_java_mem,
-            "pretransfer_mem": pretransfer_mem,
-            "posttransfer_mem": posttransfer_mem,
-            "transfer_time": transfer_time,
-            "to_df_mem": to_df_mem}
+    result = {"sum_time": sum_time, 
+              "load_time": load_time,
+              "preload_java_mem": preload_java_mem,
+              "pretransfer_mem": pretransfer_mem,
+              "posttransfer_mem": posttransfer_mem,
+              "transfer_time": transfer_time,
+              "spark_defaultParallelism": sc.defaultParallelism,
+              "spark_getNumPartitions": sdf.rdd.getNumPartitions(),
+              "to_df_mem": to_df_mem}
+    result.update(spark_params)
+    return result
 
 def generate_params(json_filename, args, types):
     """
