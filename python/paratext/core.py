@@ -376,3 +376,23 @@ def baseline_disk_to_mem(filename, *args, **kwargs):
     mc = pti.MemCopyBaseline();
     count = mc.load(filename, params)
     return count
+
+def internal_compare(filename, *args, **kwargs):
+    """
+    Loads a Pandas DataFrame with pandas and paratext, and compares their contents.
+    """
+    import pandas
+    dfY = load_csv_to_pandas(filename, *args, **kwargs)
+    if kwargs.get("no_header"):
+        dfX = pandas.read_csv(filename, header=None, na_values=['?'], names=dfY.keys())
+    else:
+        dfX = pandas.read_csv(filename, na_values=['?'])
+    results = {}
+    for key in dfX.columns:
+        if dfX[key].dtype in (str, unicode, np.object):
+            nonnan_mask = (dfY[key] != 'nan') & (dfY[key] != '?')
+            results[key] = (dfX[key][nonnan_mask]!=dfY[key][nonnan_mask]).mean()
+        else:
+            nonnan_mask = ~np.isnan(dfX[key])
+            results[key] = abs(dfX[key][nonnan_mask]-dfY[key][nonnan_mask]).max()
+    return results
