@@ -110,7 +110,7 @@ public:
     }
   }
   
-  const std::vector<float> &get_sums() const {
+  const std::vector<double> &get_sums() const {
     return sums_;
   }
 
@@ -131,13 +131,13 @@ public:
     for (; it != end && isspace(*it); it++) {}
     if (it != end) {
       if (*it == '?' && std::distance(it, end) == 1) {
-        return std::numeric_limits<float>::quiet_NaN();
+        return std::numeric_limits<double>::quiet_NaN();
       }
       else if (std::distance(it, end) == 3 &&
                ((*it == 'n' || *it == 'N'))
                && ((*(it+1) == 'a' || *(it+1) == 'A'))
                && ((*(it+2) == 'n' || *(it+2) == 'N'))) {
-        return std::numeric_limits<float>::quiet_NaN();
+        return std::numeric_limits<double>::quiet_NaN();
       }
       else {
         if (*it == '-') { it++; }
@@ -236,7 +236,7 @@ private:
       return header_parser_.get_num_columns();
     }
 
-    float get_avg(size_t column_index) const {
+    double get_avg(size_t column_index) const {
       return avgs_[column_index];
     }
 
