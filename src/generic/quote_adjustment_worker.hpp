@@ -209,8 +209,6 @@ public:
     num_quotes_ = 0;
     first_unquoted_newline_ = 0;
     first_quoted_newline_ = 0;
-    num_quotes_before_first_unquoted_newline_ = 0;
-    num_quotes_before_first_quoted_newline_ = 0;
   }
 
 private:
@@ -219,8 +217,6 @@ private:
   size_t num_quotes_;
   long first_unquoted_newline_;
   long first_quoted_newline_;
-  size_t num_quotes_before_first_unquoted_newline_;
-  size_t num_quotes_before_first_quoted_newline_;
   std::exception_ptr thread_exception_;
 };
 }

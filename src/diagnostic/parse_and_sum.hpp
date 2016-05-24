@@ -160,7 +160,7 @@ private:
   size_t num_columns_;
   size_t num_lines_;
   size_t column_index_;
-  std::vector<float> sums_;
+  std::vector<double> sums_;
   std::exception_ptr thread_exception_;
 };
 
@@ -251,7 +251,7 @@ private:
   private:
     CSV::HeaderParser header_parser_;
     TextChunker chunker_;
-    std::vector<float> avgs_;
+    std::vector<double> avgs_;
     size_t N_;
   };
   }
