@@ -379,7 +379,7 @@ def bench_mat(params):
 def bench_pyspark(params):
     from pyspark import SparkContext
     from pyspark.sql import SQLContext
-    sc = SparkContext("local[*]", "PySpark CSV Benchmark", pyFiles=[])
+    sc = SparkContext("local[*]", "SparkCSV Benchmark", pyFiles=[])
     sqlContext = SQLContext(sc)
     preload_java_mem = memory_usage_psutil("java")
     preload_mem = memory_usage_resource() + memory_usage_psutil("java")
