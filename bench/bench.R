@@ -24,6 +24,8 @@ mem <- memory_usage()
 
 sum_tic <- Sys.time()
 s <- colSums(Filter(is.numeric, df))
+s <- apply(Filter(function(x){!is.numeric(x)}, df), 2, function(x){sum(nchar(x))})
+
 sum_toc <- Sys.time()
 sum_time <- as.double(difftime(sum_toc, sum_tic, units="seconds"))
 
