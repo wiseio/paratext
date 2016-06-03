@@ -8,7 +8,7 @@ if swig_check != 0:
     sys.exit(1)
 
 extra_link_args = []
-extra_compile_args = ["-std=c++11", "-msse4", "-Wall", "-Wextra", "-pthread"]
+extra_compile_args = ["-std=c++11", "-Wall", "-Wextra", "-pthread"]
 extra_libraries = []
 
 if sys.platform == 'darwin':

@@ -32,13 +32,17 @@ def convert_mat(df, output_filename):
     sio.savemat(output_filename, dd)
 
 input_filename = sys.argv[1]
-output_filenames = sys.argv[2:]
+has_header = int(sys.argv[2])
+output_filenames = sys.argv[3:]
 
 if not input_filename.endswith(".csv"):
     print "input must be a CSV file (by extension)"
     sys.exit(1)
 
-df = paratext.load_csv_to_pandas(input_filename, allow_quoted_newlines=True)
+if has_header:
+    df = pandas.read_csv(input_filename)
+else:
+    df = pandas.read_csv(input_filename, header=None)
 
 for output_filename in output_filenames:
     _, extension = os.path.splitext(output_filename)

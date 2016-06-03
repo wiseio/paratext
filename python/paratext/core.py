@@ -40,11 +40,12 @@ _csv_load_params_doc = """
     max_level_name_length : int
         The maximum length of a categorical level name. If a text field has
         a length that exceeds this length, the entire column is treated as
-        text.
+        text. (default=max integer)
 
     max_levels : int
         The maximum number of levels of a categorical column. If a column
         has more than ``max_levels`` unique strings, it is treated as text.
+        (default=max integer)
 
     cat_names : sequence
         A list of column names that should be treated as categorical
@@ -308,12 +309,22 @@ def load_csv_to_pandas(filename, *args, **kwargs):
     return pandas.DataFrame.from_items(load_csv_to_expanded_columns(filename, *args, **kwargs))
 
 @_docstring_parameter(_csv_load_params_doc)
-def baseline_average_columns(filename, *args, **kwargs):
+def baseline_average_columns(filename, type_check=False, *args, **kwargs):
     """
     Computes the sum of numeric columns in a numeric-only CSV file.
 
+    This is useful for computing a baseline for performance metrics.
+    It reads a file without any parsing, but the memory requirements
+    are fixed in the number of columns. Memory does not grow the larger
+    the file in the number of lines.
+
+
     Parameters
     ----------
+    type_check : bool
+
+         Whether to perform type checking.
+
     {0}
 
     Returns
@@ -323,7 +334,7 @@ def baseline_average_columns(filename, *args, **kwargs):
     """
     params = _get_params(*args, **kwargs)
     summer = pti.ParseAndSum();
-    summer.load(filename, params)
+    summer.load(filename, params, type_check)
     d = {summer.get_column_name(i): summer.get_avg(i) for i in xrange(0, summer.get_num_columns())}
     return d
 
@@ -331,8 +342,9 @@ def baseline_average_columns(filename, *args, **kwargs):
 @_docstring_parameter(_csv_load_params_doc)
 def baseline_newline_count(filename, *args, **kwargs):
     """
-    Computes the number of newlines in the file. Note, this is not the same
-    as the number of lines in a file.
+    Computes the number of newline characters in the file.
+
+    Note: this is not the same as the number of lines in a file.
 
     Parameters
     ----------
@@ -349,12 +361,12 @@ def baseline_newline_count(filename, *args, **kwargs):
     return count
 
 @_docstring_parameter(_csv_load_params_doc)
-def baseline_memcopy(filename, *args, **kwargs):
+def baseline_disk_to_mem(filename, *args, **kwargs):
     """
-    Simply copies the contents of a file into a collection of buffers
-    and then deallocates them at the end. This shows the performance of
-    reading a file without any parsing but with memory requirements that
-    grow with the size of the file.
+    This function copies the contents of a file into a collection of buffers.
+    The buffers are then deallocated. This is useful for computing a baseline 
+    for performance metrics. It reads a file without any parsing, but the
+    memory requirements grow with the size of the file.
 
     Parameters
     ----------
@@ -364,3 +376,23 @@ def baseline_memcopy(filename, *args, **kwargs):
     mc = pti.MemCopyBaseline();
     count = mc.load(filename, params)
     return count
+
+def internal_compare(filename, *args, **kwargs):
+    """
+    Loads a Pandas DataFrame with pandas and paratext, and compares their contents.
+    """
+    import pandas
+    dfY = load_csv_to_pandas(filename, *args, **kwargs)
+    if kwargs.get("no_header"):
+        dfX = pandas.read_csv(filename, header=None, na_values=['?'], names=dfY.keys())
+    else:
+        dfX = pandas.read_csv(filename, na_values=['?'])
+    results = {}
+    for key in dfX.columns:
+        if dfX[key].dtype in (str, unicode, np.object):
+            nonnan_mask = (dfY[key] != 'nan') & (dfY[key] != '?')
+            results[key] = (dfX[key][nonnan_mask]!=dfY[key][nonnan_mask]).mean()
+        else:
+            nonnan_mask = ~np.isnan(dfX[key])
+            results[key] = abs(dfX[key][nonnan_mask]-dfY[key][nonnan_mask]).max()
+    return results

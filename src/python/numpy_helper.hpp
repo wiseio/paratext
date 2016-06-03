@@ -92,7 +92,7 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
         PyObject *newobj = PyString_FromStringAndSize(container[i].c_str(), container[i].size());
         Py_XDECREF(*ref);
         *ref = newobj;
-        Py_XINCREF(*ref);
+        //Py_XINCREF(*ref);
       }
     }
     catch (...) {
@@ -154,7 +154,7 @@ struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_sam
         PyObject *newobj = PyString_FromStringAndSize((*it).c_str(), (*it).size());
         Py_XDECREF(*ref);
         *ref = newobj;
-        Py_XINCREF(*ref);
+        //Py_XINCREF(*ref);
       }
     }
     catch (...) {
@@ -194,7 +194,7 @@ struct derived_insert_populator_impl : public base_insert_populator_impl<Populat
     try {
       array = (PyObject*)PyArray_SimpleNew(1, fdims, numpy_type<value_type>::id);
       value_type *data = (value_type*)PyArray_DATA((PyArrayObject*)array);
-      populator.insert(data);
+      populator.insert_into_buffer(data);
     }
     catch (...) {
       Py_XDECREF(array);
@@ -209,21 +209,21 @@ struct derived_insert_populator_impl : public base_insert_populator_impl<Populat
 struct string_array_output_iterator  : public std::iterator<std::forward_iterator_tag, std::string> {
   string_array_output_iterator(PyArrayObject *array) : i(0), array(array) {}
 
-  string_array_output_iterator &operator++() {
+  inline string_array_output_iterator &operator++() {
     PyObject *s = PyString_FromStringAndSize(output.c_str(), output.size());
     PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
     Py_XDECREF(*ref);
     *ref = s;
-    Py_XINCREF(*ref);
+    //Py_XINCREF(*ref);
     i++;
     return *this;
   }
 
-  string_array_output_iterator &operator++(int) {
+  inline string_array_output_iterator &operator++(int) {
     return operator++();
   }
 
-  std::string &operator*() {
+  inline std::string &operator*() {
     return output;
   }
   
@@ -258,36 +258,30 @@ struct derived_insert_populator_impl<Populator, std::string> : public base_inser
 
 template <class Populator>
 PyObject *build_populator(const Populator &populator) {
-  static std::unordered_map<std::type_index, std::shared_ptr<base_insert_populator_impl<Populator>>> populators;
-  if (populators.size() == 0) {
-    populators.insert(std::make_pair(std::type_index(typeid(uint8_t)),
-                              std::make_shared<derived_insert_populator_impl<Populator, uint8_t>>()));
-    populators.insert(std::make_pair(std::type_index(typeid(int8_t)),
-                              std::make_shared<derived_insert_populator_impl<Populator, int8_t>>()));
-
-    populators.insert(std::make_pair(std::type_index(typeid(uint16_t)),
-                              std::make_shared<derived_insert_populator_impl<Populator, uint16_t>>()));
-    populators.insert(std::make_pair(std::type_index(typeid(int16_t)),
-                              std::make_shared<derived_insert_populator_impl<Populator, int16_t>>()));
-
-    populators.insert(std::make_pair(std::type_index(typeid(uint32_t)),
-                              std::make_shared<derived_insert_populator_impl<Populator, uint32_t>>()));
-    populators.insert(std::make_pair(std::type_index(typeid(int32_t)),
-                              std::make_shared<derived_insert_populator_impl<Populator, int32_t>>()));
-
-    populators.insert(std::make_pair(std::type_index(typeid(uint64_t)),
-                              std::make_shared<derived_insert_populator_impl<Populator, uint64_t>>()));
-    populators.insert(std::make_pair(std::type_index(typeid(int64_t)),
-                              std::make_shared<derived_insert_populator_impl<Populator, int64_t>>()));
-
-    populators.insert(std::make_pair(std::type_index(typeid(float)),
-                              std::make_shared<derived_insert_populator_impl<Populator, float>>()));
-    populators.insert(std::make_pair(std::type_index(typeid(double)),
-                              std::make_shared<derived_insert_populator_impl<Populator, double>>()));
-
-    populators.insert(std::make_pair(std::type_index(typeid(std::string)),
-                                     std::make_shared<derived_insert_populator_impl<Populator, std::string>>()));
-  }
+  static std::unordered_map<std::type_index, std::shared_ptr<base_insert_populator_impl<Populator>>>
+    populators({std::make_pair(std::type_index(typeid(uint8_t)),
+                               std::make_shared<derived_insert_populator_impl<Populator, uint8_t>>()),
+          std::make_pair(std::type_index(typeid(int8_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, int8_t>>()),
+          std::make_pair(std::type_index(typeid(uint16_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, uint16_t>>()),
+          std::make_pair(std::type_index(typeid(int16_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, int16_t>>()),
+          std::make_pair(std::type_index(typeid(uint32_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, uint32_t>>()),
+          std::make_pair(std::type_index(typeid(int32_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, int32_t>>()),
+          std::make_pair(std::type_index(typeid(uint64_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, uint64_t>>()),
+          std::make_pair(std::type_index(typeid(int64_t)),
+                         std::make_shared<derived_insert_populator_impl<Populator, int64_t>>()),
+          std::make_pair(std::type_index(typeid(float)),
+                         std::make_shared<derived_insert_populator_impl<Populator, float>>()),
+          std::make_pair(std::type_index(typeid(double)),
+                         std::make_shared<derived_insert_populator_impl<Populator, double>>()),
+          std::make_pair(std::type_index(typeid(std::string)),
+                         std::make_shared<derived_insert_populator_impl<Populator, std::string>>())
+          });
   auto it = populators.find(populator.get_type_index());
   if (it == populators.end()) {
     throw std::logic_error(std::string("cannot process type"));

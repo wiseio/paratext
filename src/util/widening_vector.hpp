@@ -1,17 +1,14 @@
 /*
     ParaText: parallel text reading
     Copyright (C) 2016. wise.io, Inc.
-
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
-
     This program is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU General Public License for more details.
-
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -53,20 +50,18 @@ template <class Head>
 struct max_sizeof<Head> : public std::integral_constant<std::size_t, sizeof(Head)> {};
 
 static std::string get_type_name(std::type_index idx) {
-  static std::unordered_map<std::type_index, std::string> names;
-  if (names.size() == 0) {
-    names.insert(std::make_pair(std::type_index(typeid(uint8_t)), "uint8"));
-    names.insert(std::make_pair(std::type_index(typeid(uint16_t)), "uint16"));
-    names.insert(std::make_pair(std::type_index(typeid(uint32_t)), "uint32"));
-    names.insert(std::make_pair(std::type_index(typeid(uint64_t)), "uint64"));
-    names.insert(std::make_pair(std::type_index(typeid(int8_t)), "int8"));
-    names.insert(std::make_pair(std::type_index(typeid(int16_t)), "int16"));
-    names.insert(std::make_pair(std::type_index(typeid(int32_t)), "int32"));
-    names.insert(std::make_pair(std::type_index(typeid(int64_t)), "int64"));
-    names.insert(std::make_pair(std::type_index(typeid(float)), "float"));
-    names.insert(std::make_pair(std::type_index(typeid(double)), "double"));
-    names.insert(std::make_pair(std::type_index(typeid(std::string)), "string"));
-  }
+  static std::unordered_map<std::type_index, std::string>
+    names({std::make_pair(std::type_index(typeid(uint8_t)), "uint8"),
+          std::make_pair(std::type_index(typeid(uint16_t)), "uint16"),
+          std::make_pair(std::type_index(typeid(uint32_t)), "uint32"),
+          std::make_pair(std::type_index(typeid(uint64_t)), "uint64"),
+          std::make_pair(std::type_index(typeid(int8_t)), "int8"),
+          std::make_pair(std::type_index(typeid(int16_t)), "int16"),
+          std::make_pair(std::type_index(typeid(int32_t)), "int32"),
+          std::make_pair(std::type_index(typeid(int64_t)), "int64"),
+          std::make_pair(std::type_index(typeid(float)), "float"),
+          std::make_pair(std::type_index(typeid(double)), "double"),
+          std::make_pair(std::type_index(typeid(std::string)), "string")});
   auto it = names.find(idx);
   if (it == names.end()) {
     return idx.name();
@@ -78,29 +73,28 @@ static std::string get_type_name(std::type_index idx) {
 
 template <class T>
 static std::type_index get_common_type_index(std::type_index idx) {
-  static std::unordered_map<std::type_index, std::type_index> common_types;
-  if (common_types.size() == 0) {
-    common_types.insert(std::make_pair(std::type_index(typeid(uint8_t)),
-                                       std::type_index(typeid(typename std::common_type<T, uint8_t>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(uint16_t)),
-                                       std::type_index(typeid(typename std::common_type<T, uint16_t>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(uint32_t)),
-                                       std::type_index(typeid(typename std::common_type<T, uint32_t>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(uint64_t)),
-                                       std::type_index(typeid(typename std::common_type<T, uint64_t>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(int8_t)),
-                                       std::type_index(typeid(typename std::common_type<T, int8_t>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(int16_t)),
-                                       std::type_index(typeid(typename std::common_type<T, int16_t>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(int32_t)),
-                                       std::type_index(typeid(typename std::common_type<T, int32_t>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(int64_t)),
-                                       std::type_index(typeid(typename std::common_type<T, int64_t>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(float)),
-                                       std::type_index(typeid(typename std::common_type<T, float>::type))));
-    common_types.insert(std::make_pair(std::type_index(typeid(double)),
-                                       std::type_index(typeid(typename std::common_type<T, double>::type))));
-  }
+  static std::unordered_map<std::type_index, std::type_index>
+    common_types({
+                  std::make_pair(std::type_index(typeid(uint8_t)),
+                                 std::type_index(typeid(typename std::common_type<T, uint8_t>::type))),
+                  std::make_pair(std::type_index(typeid(uint16_t)),
+                                 std::type_index(typeid(typename std::common_type<T, uint16_t>::type))),
+                  std::make_pair(std::type_index(typeid(uint32_t)),
+                                 std::type_index(typeid(typename std::common_type<T, uint32_t>::type))),
+                  std::make_pair(std::type_index(typeid(uint64_t)),
+                                 std::type_index(typeid(typename std::common_type<T, uint64_t>::type))),
+                  std::make_pair(std::type_index(typeid(int8_t)),
+                                 std::type_index(typeid(typename std::common_type<T, int8_t>::type))),
+                  std::make_pair(std::type_index(typeid(int16_t)),
+                                 std::type_index(typeid(typename std::common_type<T, int16_t>::type))),
+                  std::make_pair(std::type_index(typeid(int32_t)),
+                                 std::type_index(typeid(typename std::common_type<T, int32_t>::type))),
+                  std::make_pair(std::type_index(typeid(int64_t)),
+                                 std::type_index(typeid(typename std::common_type<T, int64_t>::type))),
+                  std::make_pair(std::type_index(typeid(float)),
+                                 std::type_index(typeid(typename std::common_type<T, float>::type))),
+                  std::make_pair(std::type_index(typeid(double)),
+                                 std::type_index(typeid(typename std::common_type<T, double>::type)))});
   auto it = common_types.find(idx);
   if (it == common_types.end()) {
     std::ostringstream ostr;
@@ -139,6 +133,16 @@ struct widening_vector_impl_base {
   virtual void copy_into(int64_t* array) const = 0;
   virtual void copy_into(float* array) const = 0;
   virtual void copy_into(double* array) const = 0;
+
+  template <class T>
+  T get_sum() const {
+    return get_sum_impl(T());
+  }
+
+  virtual double get_sum_impl(double) const = 0;
+  virtual float get_sum_impl(float) const = 0;
+  virtual size_t get_sum_impl(size_t) const = 0;
+  virtual long get_sum_impl(long) const = 0;
 };
 
 template <class WVT>
@@ -156,6 +160,11 @@ struct widening_vector_impl_crtp : public widening_vector_impl_base {
   virtual void copy_into(int64_t* array) const { ((WVT*)this)->copy_into_impl(array); }
   virtual void copy_into(float* array) const { ((WVT*)this)->copy_into_impl(array); }
   virtual void copy_into(double* array) const { ((WVT*)this)->copy_into_impl(array); }
+
+  virtual double get_sum_impl(double) const { return ((WVT*)this)->template get_sum<double>(); }
+  virtual float get_sum_impl(float) const { return ((WVT*)this)->template get_sum<float>(); }
+  virtual size_t get_sum_impl(size_t) const { return ((WVT*)this)->template get_sum<size_t>(); }
+  virtual long get_sum_impl(long) const { return ((WVT*)this)->template get_sum<long>(); }
 };
 
 /*
@@ -282,8 +291,14 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
   }
 
   template <class T>
-  void copy_into_impl(T *output) {
+  void copy_into_impl(T *output) const {
     std::copy(values_.begin(), values_.end(), output);
+  }
+
+  template <class T>
+  T get_sum() const {
+    auto begin = values_.begin();
+    return std::accumulate<decltype(begin)>(values_.begin(), values_.end(), (T)0);
   }
 
 private:
@@ -336,6 +351,12 @@ template <class Head>
 struct widening_vector_impl<1, Head> : public widening_vector_impl_crtp<widening_vector_impl<1, Head>> {
 
   widening_vector_impl() {}
+
+  template <class T>
+  inline T get_sum() const {
+    auto begin = values_.begin();
+    return std::accumulate<decltype(begin)>(values_.begin(), values_.end(), (T)0);
+  }
 
   template <class T>
   T get(size_t i) const {
@@ -401,7 +422,7 @@ struct widening_vector_impl<1, Head> : public widening_vector_impl_crtp<widening
   }
 
   template <class T>
-  void copy_into_impl(T *output) {
+  void copy_into_impl(T *output) const {
     std::copy(values_.begin(), values_.end(), output);
   }
 
@@ -457,6 +478,11 @@ public:
   template <class Q>
   typename std::enable_if<!std::is_floating_point<Q>::value, Q>::type get(size_t i) const {
     return (Q)current_->v_get_long(i);
+  }
+
+  template <class Q>
+  inline Q get_sum() const {
+    return current_->get_sum<Q>();
   }
 
   void clear() {

@@ -75,7 +75,7 @@ public:
       if (nread == 0) {
         break;
       }
-      data_.emplace_back(buf + 0, buf + nread);
+      data_.insert(data_.begin(), buf + 0, buf + nread);
       current += nread;
     }
   }
@@ -84,7 +84,7 @@ private:
   size_t chunk_start_;
   size_t chunk_end_;
   size_t block_size_;
-  std::vector<std::vector<char> > data_;
+  std::vector<char> data_;
   std::exception_ptr thread_exception_;
 };
 

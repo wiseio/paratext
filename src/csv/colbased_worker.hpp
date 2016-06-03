@@ -320,8 +320,6 @@ public:
           }
         }
       if (integer_possible) {
-        //std::string s(token_.begin(), token_.end());
-        //std::cout << s << ":" << fast_atoi<long>(token_.begin(), token_.end()) << std::endl;
         handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
       }
       else if (float_possible || exp_possible) {
@@ -335,6 +333,14 @@ public:
     }
     column_index_++;
     token_.clear();
+  }
+
+  void convert_to_cat_or_text(size_t column_index) {
+    handlers_[column_index]->convert_to_cat_or_text();
+  }
+
+  void convert_to_text(size_t column_index) {
+    handlers_[column_index]->convert_to_text();
   }
 
 private:
