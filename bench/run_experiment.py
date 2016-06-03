@@ -69,8 +69,6 @@ def sum_dictframe(d, levels):
         if key in levels.keys():
             level_sums = np.array([len(el) for el in levels[key]])
             s[key] = level_sums[d[key]].sum()
-        elif d[key].dtype == np.object_:
-            s[key] = level
         else:
             s[key] = d[key].sum()
     return s
