@@ -88,6 +88,8 @@ datasets = {"mnist":
              "to_df": True}
              }
 
+scaling_experiments = bool(raw_input("enter 'yes' to do scaling experiments, 'no' to do main benchmarks: ").lower() == 'yes')
+
 print "available datasets: ", datasets.keys()
 restrict_keys = raw_input("enter comma-delimited list of datasets to generate experiment json [enter for all]: ")
 
@@ -101,7 +103,11 @@ for name, attr in datasets.iteritems():
     if "csv" in attr:
         csv_filename = attr["csv"]
         for disk_state in ["cold", "warm"]:
-            for num_threads in [1,4,8,12,16,20,24,28,32]:
+            if scaling_experiments:
+                num_threads_list = [1,4,8,12,16,20,24,28,32]
+            else:
+                num_threads_list = [0]
+            for num_threads in num_threads_list:
                 for block_size in [32768]:
                     if not attr.get("contains_text", False):
                         for type_check in [True, False]:
@@ -152,7 +158,7 @@ for name, attr in datasets.iteritems():
                           "disk_state": disk_state}
                 all_params.append(params)                
 
-            for cmd in ["sframe", "pandas", "R-readcsv"]:
+            for cmd in ["sframe", "pandas", "R-readcsv", "R-readr", "R-fread"]:
                 params = {"cmd": cmd,
                           "filename": attr["csv"],
                           "no_header": attr.get("no_header", True),

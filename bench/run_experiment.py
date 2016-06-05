@@ -346,11 +346,41 @@ def bench_feather(params):
         sum_time = sum_toc - sum_tic
     return {"sum_time": sum_time}
 
-def bench_R(params):
+def bench_R_readcsv(params):
     f = tempfile.NamedTemporaryFile(delete=False)
     tmp_result_fn = f.name
     runtime_tic = time.time()
-    os.system("bench.R %s %s" % (params["filename"], tmp_result_fn))
+    os.system("test_readcsv.R %s %s" % (params["filename"], tmp_result_fn))
+    runtime_toc = time.time()
+    runtime = runtime_toc - runtime_tic
+    fid = open(tmp_result_fn)
+    result_json = json.load(fid)
+    fid.close()
+    f.close()
+    result_json["runtime"] = runtime
+    os.unlink(tmp_result_fn)
+    return result_json
+
+def bench_R_fread(params):
+    f = tempfile.NamedTemporaryFile(delete=False)
+    tmp_result_fn = f.name
+    runtime_tic = time.time()
+    os.system("test_fread.R %s %s" % (params["filename"], tmp_result_fn))
+    runtime_toc = time.time()
+    runtime = runtime_toc - runtime_tic
+    fid = open(tmp_result_fn)
+    result_json = json.load(fid)
+    fid.close()
+    f.close()
+    result_json["runtime"] = runtime
+    os.unlink(tmp_result_fn)
+    return result_json
+
+def bench_R_readr(params):
+    f = tempfile.NamedTemporaryFile(delete=False)
+    tmp_result_fn = f.name
+    runtime_tic = time.time()
+    os.system("test_readr.R %s %s" % (params["filename"], tmp_result_fn))
     runtime_toc = time.time()
     runtime = runtime_toc - runtime_tic
     fid = open(tmp_result_fn)
@@ -482,8 +512,12 @@ def main():
         results = bench_cPickle(params)
     elif cmd == "mat":
         results = bench_mat(params)
+    elif cmd == "R-readr":
+        results = bench_R_readr(params)
+    elif cmd == "R-fread":
+        results = bench_R_fread(params)
     elif cmd == "R-readcsv":
-        results = bench_R(params)
+        results = bench_R_readcsv(params)
     elif cmd == "sframe":
         results = bench_sframe(params)
     elif cmd == "disk-to-mem":
@@ -499,12 +533,11 @@ def main():
         sys.exit(1)
     toc = time.time()
     runtime=toc-tic
-    if cmd == "R-readcsv":
+    if cmd in ["R-readcsv", "R-fread", "R-readr"]:
         runtime = results["runtime"]
-    if cmd == "pyspark":
+        mem = results["mem"] / 1000000 # should be in MB, not bytes.
+    elif cmd == "pyspark":
         mem=memory_usage_resource() + memory_usage_psutil("java")
-    elif cmd == "R-readcsv":
-        mem=results["mem"]
     else:
         mem=memory_usage_resource()
     log_entry = params.copy()
@@ -519,7 +552,6 @@ def main():
         log_entry["filesize"] = float(sz)
         log_entry["tput_bytes"] = float(sz) / runtime
         log_entry["tput_MB"] = (float(sz)/1000000) / runtime
-        log_entry["tput_MiB"] = (float(sz)/1048576) / runtime
     if log_fn is None:
         print log_entry
     else:
