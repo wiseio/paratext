@@ -118,13 +118,17 @@ namespace CSV {
         else {
           //std::cout << "[" << std::string(begin, end);
           convert_to_cat_or_text();
-          std::string key(begin, end);
+          static thread_local std::string key;
+          key.insert(key.begin(), begin, end);
           add_cat_data(key);
+          key.clear();
         }
       }
       else {
-        std::string key(begin, end);
+        static thread_local std::string key;
+        key.insert(key.begin(), begin, end);
         add_cat_data(key);
+        key.clear();
       }
     }
 
