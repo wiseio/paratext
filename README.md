@@ -210,8 +210,9 @@ that may prevent it from working on all CSV files. We note them below.
 
 1. ParaText does not yet support escape characters or comments.
 
-2. There is no support for type hints (e.g. `uint64` or `float`) of a
+2. There is no way to supply type hints (e.g. `uint64` or `float`) of a
 column.  Only the interpretation of a column (numeric, categorical, or
 text) can be forced.
 
-3. ParaText does not support
+3. DateTime support will be added in a future release.
+
