@@ -535,7 +535,7 @@ def main():
     runtime=toc-tic
     if cmd in ["R-readcsv", "R-fread", "R-readr"]:
         runtime = results["runtime"]
-        mem = results["mem"] / 1000000 # should be in MB, not bytes.
+        mem = results["mem"]
     elif cmd == "pyspark":
         mem=memory_usage_resource() + memory_usage_psutil("java")
     else:
