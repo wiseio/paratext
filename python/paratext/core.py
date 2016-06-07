@@ -309,6 +309,21 @@ def load_csv_to_expanded_columns(filename, *args, **kwargs):
         else:
             yield name, col
 
+def load_csv_as_iterator(filename, expand=True, forget=True, *args, **kwargs):
+     """
+     Loads a CSV file, producing a generator object that can be used to
+     generate a pandas DataFrame, Wise DataSet, a dictionary, or a custom
+     DataFrame.
+
+     This function is very aggressive about freeing memory. After each
+     value is generated, the corresponding scratch space in the parser
+     and worker threads is deallocated.     
+     """
+     if expand:
+          return load_csv_to_expanded_columns(filename, *args, **kwargs)
+     else:
+          return load_raw_csv(filename, *args, **kwargs)
+
 @_docstring_parameter(_csv_load_params_doc)
 def load_csv_to_pandas(filename, *args, **kwargs):
     """
