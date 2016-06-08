@@ -1,10 +1,11 @@
 
-import sys, os, os.path, string
+import sys, os, os.path, string, subprocess
 import json
 
-swig_check = os.system("which swig")
-if swig_check != 0:
-    print "Error: you must install SWIG first."
+p = subprocess.Popen(["which", "swig"])
+p.communicate("")
+if p.returncode != 0:
+    print("Error: you must install SWIG first.")
     sys.exit(1)
 
 extra_link_args = []
@@ -36,7 +37,7 @@ version = "0.1.1rc1"
 
 init_py = open("paratext/__init__.py", "w")
 
-print >>init_py, ("""#!/usr/bin/python
+init_py.write("""#!/usr/bin/python
 __all__ = ['paratext']
 
 import core, helpers
@@ -51,12 +52,16 @@ __version__ = "%s"
 init_py.close()
 
 
-print version
+print(version)
 
-swig_cmd = 'swig -c++ -python -I../src/ -outdir ./ ../src/paratext_internal.i'
+swig_cmd = ["swig", "-c++", "-python", "-I../src/", "-outdir", "./", "../src/paratext_internal.i"]
 
-print "running swig: ", swig_cmd
-os.system(swig_cmd)
+print("running swig: ", swig_cmd)
+p = subprocess.Popen(swig_cmd)
+p.communicate("")
+if p.returncode != 0:
+    print("Error: building")
+    sys.exit(1)
 
 setup(name='paratext',
       version=version,
