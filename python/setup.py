@@ -37,7 +37,7 @@ version = "0.1.1rc1"
 
 init_py = open("paratext/__init__.py", "w")
 
-print >>init_py, ("""#!/usr/bin/python
+init_py.write("""#!/usr/bin/python
 __all__ = ['paratext']
 
 import core, helpers
