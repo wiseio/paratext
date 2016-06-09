@@ -55,6 +55,7 @@ template <> struct numpy_type<int64_t>  { static const long id = NPY_INT64; };
 template <> struct numpy_type<float> { static const long id = NPY_FLOAT; };
 template <> struct numpy_type<double>  { static const long id = NPY_DOUBLE; };
 template <> struct numpy_type<std::string>  { static const long id = NPY_OBJECT; };
+template <> struct numpy_type<unsigned long>  { static const long id = NPY_ULONG; };
 
 template <class Container, class Enable=void>
 struct build_array_impl {};
@@ -91,7 +92,7 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
     size_t sz = (size_t)container.size();
     npy_intp fdims[] = {(npy_intp)sz};
     PyObject *array = (PyObject*)PyArray_SimpleNew(1, fdims, NPY_OBJECT);
-    try { 
+    try {
       for (size_t i = 0; i < container.size(); i++) {
         PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
         PyObject *newobj = PyString_FromStringAndSize(container[i].c_str(), container[i].size());
@@ -108,7 +109,7 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
         Py_XINCREF(*ref);
       }
       Py_XDECREF(array);
-      std::rethrow_exception(std::current_exception());      
+      std::rethrow_exception(std::current_exception());
     }
     return array;
   }
@@ -231,7 +232,7 @@ struct string_array_output_iterator  : public std::iterator<std::forward_iterato
   inline std::string &operator*() {
     return output;
   }
-  
+
   int i;
   std::string output;
   PyArrayObject *array;

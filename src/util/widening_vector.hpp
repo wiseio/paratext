@@ -32,6 +32,7 @@
 #include <limits>
 #include <cstdint>
 #include <cmath>
+#include <numeric>
 
 #include <typeinfo>
 #include <typeindex>
@@ -339,7 +340,7 @@ private:
   static_assert(std::is_floating_point<Head>::value
                 || std::is_integral<Head>::value,
                 "only integral or floating-point types are allowed");
-  
+
   static_assert(std::is_integral<Head>::value
                 || !contains_integral<Ts...>::value,
                 "a floating-point type must not appear before an integral type");
@@ -464,7 +465,7 @@ public:
 
   virtual ~widening_vector_dynamic() {
   }
-  
+
   void push_back(float val) {
     current_ = current_->v_push_back(val);
   }
