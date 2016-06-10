@@ -98,7 +98,12 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
     try {
       for (size_t i = 0; i < container.size(); i++) {
         PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
-        PyObject *newobj = PyString_FromStringAndSize(container[i].c_str(), container[i].size());
+        PyObject *newobj = NULL;
+        #if PY_MAJOR_VERSION < 3
+        newobj = PyString_FromStringAndSize(container[i].c_str(), container[i].size());
+        #else
+        newobj = PyUnicode_FromStringAndSize(container[i].c_str(), container[i].size());
+        #endif
         Py_XDECREF(*ref);
         *ref = newobj;
         //Py_XINCREF(*ref);
@@ -160,7 +165,12 @@ struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_sam
       size_t i = 0;
       for (Iterator it = range.first; it != range.second; it++, i++) {
         PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
-        PyObject *newobj = PyString_FromStringAndSize((*it).c_str(), (*it).size());
+        PyObject *newobj = NULL;
+        #if PY_MAJOR_VERSION < 3
+        newobj = PyString_FromStringAndSize((*it).c_str(), (*it).size());
+        #else
+        newobj = PyUnicode_FromStringAndSize((*it).c_str(), (*it).size());
+        #endif
         Py_XDECREF(*ref);
         *ref = newobj;
         //Py_XINCREF(*ref);
@@ -219,7 +229,12 @@ struct string_array_output_iterator  : public std::iterator<std::forward_iterato
   string_array_output_iterator(PyArrayObject *array) : i(0), array(array) {}
 
   inline string_array_output_iterator &operator++() {
-    PyObject *s = PyString_FromStringAndSize(output.c_str(), output.size());
+    PyObject *s = NULL;
+#if PY_MAJOR_VERSION < 3
+    s = PyString_FromStringAndSize(output.c_str(), output.size());
+#else
+    s = PyUnicode_FromStringAndSize(output.c_str(), output.size());
+#endif
     PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
     Py_XDECREF(*ref);
     *ref = s;

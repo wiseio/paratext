@@ -54,7 +54,7 @@ init_py.close()
 
 print(version)
 
-swig_cmd = ["swig", "-c++", "-python", "-I../src/", "-outdir", "./", "../src/paratext_internal.i"]
+swig_cmd = ["swig", "-c++", "-python", "-py3", "-I../src/", "-outdir", "./", "../src/paratext_internal.i"]
 
 print("running swig: ", swig_cmd)
 p = subprocess.Popen(swig_cmd)
