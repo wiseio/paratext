@@ -55,7 +55,10 @@ template <> struct numpy_type<int64_t>  { static const long id = NPY_INT64; };
 template <> struct numpy_type<float> { static const long id = NPY_FLOAT; };
 template <> struct numpy_type<double>  { static const long id = NPY_DOUBLE; };
 template <> struct numpy_type<std::string>  { static const long id = NPY_OBJECT; };
+
+#if defined(__APPLE__)
 template <> struct numpy_type<unsigned long>  { static const long id = NPY_ULONG; };
+#endif
 
 template <class Container, class Enable=void>
 struct build_array_impl {};
