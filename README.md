@@ -3,21 +3,41 @@ ParaText
 
 ParaText is a C++ library to read text files in parallel on multi-core
 machines. The alpha release includes a CSV reader and Python bindings.
+The library itself has no dependencies other than the standard library.
 
-ParaText has the following dependencies for its Python bindings:
+Depedencies
+-----------
+ParaText has the following dependencies:
 
-   - a C++ compiler that is C++11 compliant (gcc 4.8 or above, clang 3.4 or above)
-   - SWIG 2.0.11 or above
-   - Python (2.7 or above)
+   - a fully C++11-compliant C++ compiler (gcc 4.8 or above, clang 3.4 or above)
+   - SWIG 2.0.7 or above (Python 2 bindings)
+   - SWIG 3.0.8 or above (Python 3 bindings)
+   - Python 2.7 or 3.5
    - setuptools
+   - numpy
 
-Though Pandas is optional, it must be installed to use ParaText to
-read CSV files into Pandas.
+Pandas is required only if using ParaText to read CSV files into
+Pandas. The SWIG available from Ubuntu 14.04 does not work with Python 3.
 
-The ParaText library can be built with two commands:
+Anaconda packages the latest version of SWIG that works properly
+with Python 3. You can install it as follows:
+
+```
+conda install swig
+```
+
+Building Python
+---------------
+
+First, go into the `python` directory:
 
 ```
    cd python/
+```
+
+Then run `setup.py`:
+
+```
    python setup.py build install
 ```
 
@@ -127,7 +147,7 @@ ANOREXIA array([0, 0, 0, 0, 0], dtype=uint8) ['no' 'yes' 'nan']
 ```
 
 All categorical columns in this data set have 3 or fewer levels so
-they are all `uint8_t`. A string representation uses at least 8 times
+they are all `uint8`. A string representation uses at least 8 times
 as much space, but it can also be less computationally efficient. An
 integer representation is ideal for learning on categorical columns.
 Integer comparisons over contiguous integer buffers are pretty cheap
@@ -158,49 +178,51 @@ Column Types Supported
 
 Wise ParaText supports three kinds of columns:
 
-    - numeric: for numeric data.
-    - categorical: for categorical data.
-    - text: for large strings like e-mails and text documents.
+    * numeric: for numeric data.
+
+    * categorical: for categorical data.
+
+    * text: for large strings like e-mails and text documents.
 
 In the library, we distinguish between semantics and data type. The
 semantics defines how to interpret a column. The data type (`uint8`,
-`int64`, `float`, etc.) defines how its encoded.
+`int64`, `float`, etc.) defines how the column values are encoded.
 
 Parameters
 ----------
 
-Most CSV loading functions in ParaText have the following
+Most CSV loading functions in ParaText have the following parameters:
 
-    - `cat_names`: A list of column names to force as categorical regardless
+    * `cat_names`: A list of column names to force as categorical regardless
     of the inferred type.
 
-    - `text_names`: A list of column names that should be treated as rich text
+    * `text_names`: A list of column names that should be treated as rich text
     regardless of its inferred type.
 
-    - `num_names`: A list of column names that should be treated as
+    * `num_names`: A list of column names that should be treated as
     numeric regardless of its inferred type.
 
-    - `num_threads`:  The number of parser threads to spawn. The default
+    * `num_threads`:  The number of parser threads to spawn. The default
     is the number of cores.
 
-    - `allow_quoted_newlines`:  Allows multi-line text fields. This
+    * `allow_quoted_newlines`:  Allows multi-line text fields. This
     is turned off by default.
 
-    - `no_header`: Do not auto-detect the presence of a header. Assume
+    * `no_header`: Do not auto-detect the presence of a header. Assume
     the first line is data. This is turned off by default.
 
-    - `max_level_name_length`: If a field's length exceeds this value,
+    * `max_level_name_length`: If a field's length exceeds this value,
     the entire column is treated as text rather than
     categorical. The default is unlimited.
 
-    - `max_levels`: The maximum number of levels of a categorical column.
-    (default=max integer)
+    * `max_levels`: The maximum number of levels of a categorical column.
+    The default is unlimited.
 
-    - `number_only`: Whether it can be safely assumed the columns only
-    contain numbers. This is turned off by default.
+    * `number_only`: Whether it can be safely assumed the columns only
+    contain numbers. The default is unlimited.
 
-    - `block_size`: The number of bytes to read at a time in each worker.
-    (default=32768)
+    * `block_size`: The number of bytes to read at a time in each worker
+    thread. The default is unlimited.
 
 Other Notes
 -----------
@@ -215,4 +237,3 @@ column.  Only the interpretation of a column (numeric, categorical, or
 text) can be forced.
 
 3. DateTime support will be added in a future release.
-

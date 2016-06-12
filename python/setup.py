@@ -2,18 +2,22 @@
 import sys, os, os.path, string, subprocess
 import json
 
+# First, check for the presence of swig, which we will need to build
+# the Python bindings.
 p = subprocess.Popen(["which", "swig"])
 p.communicate("")
 if p.returncode != 0:
     print("Error: you must install SWIG first.")
     sys.exit(1)
 
+# The multi-threaded reader will core dump unless -pthread is given.
 extra_link_args = []
 extra_compile_args = ["-std=c++11", "-Wall", "-Wextra", "-pthread"]
 extra_libraries = []
 
 if sys.platform == 'darwin':
     extra_compile_args += ["-m64", "-D_REENTRANT"]
+    extra_link_args += []
     extra_libraries += []
 elif sys.platform.startswith("linux"):
     extra_compile_args += []
@@ -37,11 +41,11 @@ version = "0.1.1rc1"
 
 init_py = open("paratext/__init__.py", "w")
 
-init_py.write("""#!/usr/bin/python
+init_py.write("""
 __all__ = ['paratext']
 
-import core, helpers
-from core import *
+from paratext.core import *
+from paratext.helpers import *
 
 import paratext_internal
 import warnings
@@ -54,18 +58,23 @@ init_py.close()
 
 print(version)
 
-swig_cmd = ["swig", "-c++", "-python", "-I../src/", "-outdir", "./", "../src/paratext_internal.i"]
+swig_cmd = ["swig", "-c++", "-python"]
+
+if sys.version_info >= (3,):
+    swig_cmd += ["-py3"]
+
+swig_cmd += ["-I../src/", "-outdir", "./", "../src/paratext_internal.i"]
 
 print("running swig: ", swig_cmd)
 p = subprocess.Popen(swig_cmd)
 p.communicate("")
 if p.returncode != 0:
-    print("Error: building")
+    print("Error generating SWIG wrappers.")
     sys.exit(1)
 
 setup(name='paratext',
       version=version,
-      description='Reads text files in parallel. The first release includes a paralell CSV reader.',
+      description='Reads text files in parallel. The first release includes a parallel CSV reader.',
       long_description="""
 See README
 """,
@@ -80,7 +89,7 @@ See README
       py_modules=["paratext_internal"],
       author="Damian Eads",
       author_email="damian@wise.io",
-      license="GNU General Public License",
+      license="Apache License",
       packages = ['paratext'],
       url = 'http://wise.io',
       include_package_data = True,
