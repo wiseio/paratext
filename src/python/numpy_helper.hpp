@@ -60,6 +60,14 @@ template <> struct numpy_type<std::string>  { static const long id = NPY_OBJECT;
 template <> struct numpy_type<unsigned long>  { static const long id = NPY_ULONG; };
 #endif
 
+inline PyObject *as_python_string(const std::string &in) {
+#if PY_MAJOR_VERSION < 3
+  return PyString_FromStringAndSize(in.c_str(), in.size());
+#else
+  return PyUnicode_FromStringAndSize(in.c_str(), in.size());
+#endif
+}
+
 template <class Container, class Enable=void>
 struct build_array_impl {};
 
@@ -98,15 +106,9 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
     try {
       for (size_t i = 0; i < container.size(); i++) {
         PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
-        PyObject *newobj = NULL;
-        #if PY_MAJOR_VERSION < 3
-        newobj = PyString_FromStringAndSize(container[i].c_str(), container[i].size());
-        #else
-        newobj = PyUnicode_FromStringAndSize(container[i].c_str(), container[i].size());
-        #endif
+        PyObject *newobj = as_python_string(container[i]);
         Py_XDECREF(*ref);
         *ref = newobj;
-        //Py_XINCREF(*ref);
       }
     }
     catch (...) {
@@ -165,15 +167,9 @@ struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_sam
       size_t i = 0;
       for (Iterator it = range.first; it != range.second; it++, i++) {
         PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
-        PyObject *newobj = NULL;
-        #if PY_MAJOR_VERSION < 3
-        newobj = PyString_FromStringAndSize((*it).c_str(), (*it).size());
-        #else
-        newobj = PyUnicode_FromStringAndSize((*it).c_str(), (*it).size());
-        #endif
+        PyObject *newobj = as_python_string(*it);
         Py_XDECREF(*ref);
         *ref = newobj;
-        //Py_XINCREF(*ref);
       }
     }
     catch (...) {
@@ -229,16 +225,10 @@ struct string_array_output_iterator  : public std::iterator<std::forward_iterato
   string_array_output_iterator(PyArrayObject *array) : i(0), array(array) {}
 
   inline string_array_output_iterator &operator++() {
-    PyObject *s = NULL;
-#if PY_MAJOR_VERSION < 3
-    s = PyString_FromStringAndSize(output.c_str(), output.size());
-#else
-    s = PyUnicode_FromStringAndSize(output.c_str(), output.size());
-#endif
+    PyObject *s = as_python_string(output);
     PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
     Py_XDECREF(*ref);
     *ref = s;
-    //Py_XINCREF(*ref);
     i++;
     return *this;
   }
@@ -251,7 +241,7 @@ struct string_array_output_iterator  : public std::iterator<std::forward_iterato
     return output;
   }
 
-  int i;
+  long i;
   std::string output;
   PyArrayObject *array;
 };

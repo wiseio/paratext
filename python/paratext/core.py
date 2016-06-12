@@ -28,9 +28,7 @@ Loads text files using multiple cores.
 
 import paratext_internal as pti
 
-import sys
-if sys.version_info < (3,):
-    range = xrange
+from six.moves import range
 
 import random
 import numpy as np
@@ -193,7 +191,7 @@ def internal_csv_loader_transfer(loader, forget=True, expand=False):
          same string object to save space.
 
     """
-    for i in range(0, loader.get_num_columns()):
+    for i in range(loader.get_num_columns()):
         col = loader.get_column(i)
         info = loader.get_column_info(i)
         semantics = 'num'
@@ -376,7 +374,7 @@ def baseline_average_columns(filename, type_check=False, *args, **kwargs):
     params = _get_params(*args, **kwargs)
     summer = pti.ParseAndSum();
     summer.load(filename, params, type_check)
-    d = {summer.get_column_name(i): summer.get_avg(i) for i in range(0, summer.get_num_columns())}
+    d = {summer.get_column_name(i): summer.get_avg(i) for i in range(summer.get_num_columns())}
     return d
 
 
