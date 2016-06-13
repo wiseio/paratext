@@ -28,7 +28,9 @@ Loads text files using multiple cores.
 
 import paratext_internal as pti
 
+import six
 from six.moves import range
+from six.moves.urllib_parse import urlparse
 
 import random
 import numpy as np
@@ -99,6 +101,17 @@ def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, nu
         params.max_level_name_length = max_level_name_length
     return params
 
+def _make_posix_filename(fn_or_uri):
+     parse_result = urlparse(fn_or_uri)
+     if parse_result.scheme in ('', 'file'):
+          result = parse_result.path
+     else:
+          raise ValueError("unsupported protocol '%s'" % fn_or_uri)
+     if six.PY2 and isinstance(result, unicode):
+          # SWIG needs UTF-8
+          result = result.encode("utf-8")
+     return result
+
 @_docstring_parameter(_csv_load_params_doc)
 def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None):
     """
@@ -129,16 +142,23 @@ def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=Fa
         params.max_levels = max_levels;
     if max_level_name_length is not None:
         params.max_level_name_length = max_level_name_length
+    if six.PY2:
+        encoder = lambda x: x.encode("utf-8")
+    else:
+        encoder = lambda x: x
     if cat_names is not None:
         for name in cat_names:
+            name = encoder(name)
             loader.force_semantics(name, pti.CATEGORICAL)
     if num_names is not None:
         for name in num_names:
+            name = encoder(name)
             loader.force_semantics(name, pti.NUMERIC)
     if text_names is not None:
         for name in text_names:
+            name = encoder(name)
             loader.force_semantics(name, pti.TEXT)
-    loader.load(filename, params)
+    loader.load(_make_posix_filename(filename), params)
     return loader
 
 def internal_csv_loader_transfer(loader, forget=True, expand=False):
@@ -373,10 +393,9 @@ def baseline_average_columns(filename, type_check=False, *args, **kwargs):
     """
     params = _get_params(*args, **kwargs)
     summer = pti.ParseAndSum();
-    summer.load(filename, params, type_check)
+    summer.load(_make_posix_filename(filename), params, type_check)
     d = {summer.get_column_name(i): summer.get_avg(i) for i in range(summer.get_num_columns())}
     return d
-
 
 @_docstring_parameter(_csv_load_params_doc)
 def baseline_newline_count(filename, *args, **kwargs):
@@ -396,7 +415,7 @@ def baseline_newline_count(filename, *args, **kwargs):
     """
     params = _get_params(*args, **kwargs)
     nc = pti.NewlineCounter();
-    count = nc.load(filename, params)
+    count = nc.load(_make_posix_filename(filename), params)
     return count
 
 @_docstring_parameter(_csv_load_params_doc)
@@ -413,7 +432,7 @@ def baseline_disk_to_mem(filename, *args, **kwargs):
     """
     params = _get_params(*args, **kwargs)
     mc = pti.MemCopyBaseline();
-    count = mc.load(filename, params)
+    count = mc.load(_make_posix_filename(filename), params)
     return count
 
 def internal_compare(filename, *args, **kwargs):
