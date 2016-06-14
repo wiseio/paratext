@@ -173,56 +173,59 @@ Header Detection
 ParaText detects the presence of a header. This can be turned off with
 `no_header=True`.
 
-Column Types Supported
-----------------------
+Column Typing
+-------------
 
-Wise ParaText supports three kinds of columns:
+This library distinguishes between a column's data type and its semantics.
+The semantics defines how to interpret a column (e.g. numeric vs. categorical).
+and the data type (`uint8`, `int64`, `float`, etc.) is the type for encoding
+column values.
 
-    * numeric: for numeric data.
+Three semantic types are supported:
 
-    * categorical: for categorical data.
+   * `num`: numeric data.
 
-    * text: for large strings like e-mails and text documents.
+   * `cat`: categorical data.
 
-In the library, we distinguish between semantics and data type. The
-semantics defines how to interpret a column. The data type (`uint8`,
-`int64`, `float`, etc.) defines how the column values are encoded.
+   * `text`: large strings like e-mails and text documents.
+
+ParaText supports `(u)int(8|16|32|64)|float|double|string` data types.
 
 Parameters
 ----------
 
 Most CSV loading functions in ParaText have the following parameters:
 
-    * `cat_names`: A list of column names to force as categorical regardless
-    of the inferred type.
+   * `cat_names`: A list of column names to force as categorical regardless
+   of the inferred type.
 
-    * `text_names`: A list of column names that should be treated as rich text
-    regardless of its inferred type.
+   * `text_names`: A list of column names that should be treated as rich text
+   regardless of its inferred type.
 
-    * `num_names`: A list of column names that should be treated as
-    numeric regardless of its inferred type.
+   * `num_names`: A list of column names that should be treated as
+   numeric regardless of its inferred type.
 
-    * `num_threads`:  The number of parser threads to spawn. The default
-    is the number of cores.
+   * `num_threads`:  The number of parser threads to spawn. The default
+   is the number of cores.
 
-    * `allow_quoted_newlines`:  Allows multi-line text fields. This
-    is turned off by default.
+   * `allow_quoted_newlines`:  Allows multi-line text fields. This
+   is turned off by default.
 
-    * `no_header`: Do not auto-detect the presence of a header. Assume
-    the first line is data. This is turned off by default.
+   * `no_header`: Do not auto-detect the presence of a header. Assume
+   the first line is data. This is turned off by default.
 
-    * `max_level_name_length`: If a field's length exceeds this value,
-    the entire column is treated as text rather than
-    categorical. The default is unlimited.
+   * `max_level_name_length`: If a field's length exceeds this value,
+   the entire column is treated as text rather than
+   categorical. The default is unlimited.
 
-    * `max_levels`: The maximum number of levels of a categorical column.
-    The default is unlimited.
+   * `max_levels`: The maximum number of levels of a categorical column.
+   The default is unlimited.
 
-    * `number_only`: Whether it can be safely assumed the columns only
-    contain numbers. The default is unlimited.
+   * `number_only`: Whether it can be safely assumed the columns only
+   contain numbers. The default is unlimited.
 
-    * `block_size`: The number of bytes to read at a time in each worker
-    thread. The default is unlimited.
+   * `block_size`: The number of bytes to read at a time in each worker
+   thread. The default is unlimited.
 
 Other Notes
 -----------
