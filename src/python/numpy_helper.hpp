@@ -61,11 +61,7 @@ template <> struct numpy_type<unsigned long>  { static const long id = NPY_ULONG
 #endif
 
 inline PyObject *as_python_string(const std::string &in) {
-#if PY_MAJOR_VERSION < 3
-  return PyString_FromStringAndSize(in.c_str(), in.size());
-#else
   return PyUnicode_FromStringAndSize(in.c_str(), in.size());
-#endif
 }
 
 template <class Container, class Enable=void>
