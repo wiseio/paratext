@@ -76,12 +76,7 @@ public:
         if (in_quote) {
           for (; i < nread; i++) {
             if (escape_count > 0) {
-              if (buf[i] == 'x') {
-                escape_count = 2;
-              }
-              else {
-                escape_count--;
-              }
+              escape_count--;
             }
             else if (buf[i] == '\\') {
               escape_count = 1;
@@ -102,12 +97,7 @@ public:
         else {
           for (; i < nread; i++) {
             if (escape_count > 0) {
-              if (buf[i] == 'x') {
-                escape_count = 2;
-              }
-              else {
-                escape_count--;
-              }
+              escape_count--;
             }
             else if (buf[i] == '\\') {
               escape_count = 1;
@@ -130,12 +120,7 @@ public:
         if (in_quote) {
           for (; i < nread; i++) {
             if (escape_count > 0) {
-              if (buf[i] == 'x') {
-                escape_count = 2;
-              }
-              else {
-                escape_count--;
-              }
+              escape_count--;
             }
             else if (buf[i] == '\\') {
               escape_count = 1;
@@ -151,12 +136,7 @@ public:
         else {
           for (; i < nread; i++) {
             if (escape_count > 0) {
-              if (buf[i] == 'x') {
-                escape_count = 2;
-              }
-              else {
-                escape_count--;
-              }
+              escape_count--;
             }
             else if (buf[i] == '\\') {
               escape_count = 1;
@@ -179,12 +159,7 @@ public:
         if (in_quote) {
           for (; i < nread; i++) {
             if (escape_count > 0) {
-              if (buf[i] == 'x') {
-                escape_count = 2;
-              }
-              else {
-                escape_count--;
-              }
+              escape_count--;
             }
             else if (buf[i] == '\\') {
               escape_count = 1;
@@ -221,12 +196,7 @@ public:
         if (in_quote) {
           for (; i < nread; i++) {
             if (escape_count > 0) {
-              if (buf[i] == 'x') {
-                escape_count = 2;
-              }
-              else {
-                escape_count--;
-              }
+              escape_count--;
             }
             else if (buf[i] == '\\') {
               escape_count = 1;
@@ -242,12 +212,7 @@ public:
         else {
           for (; i < nread; i++) {
             if (escape_count > 0) {
-              if (buf[i] == 'x') {
-                escape_count = 2;
-              }
-              else {
-                escape_count--;
-              }
+              escape_count--;
             }
             else if (buf[i] == '\\') {
               escape_count = 1;
