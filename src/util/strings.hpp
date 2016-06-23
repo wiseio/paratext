@@ -62,6 +62,242 @@
     }
   };
 
+  inline long get_decimal_from_ascii_hex(char x) {
+    char y = tolower(x);
+    return (y >= 'a') ? (y - 'a') + 10 : (y - '0');
+  }
+
+  /*
+    Converts a unicode character encoded in UCS-2 to
+    UTF-8. If successful, one or more characters are
+    added to the output iterator.
+
+    If successful, this function returns 0, otherwise
+    1 is returned if the UCS-2 character is invalid.
+  */
+  template <class OutputIterator>
+  int ucs2_to_utf8 (int ucs2, OutputIterator out)
+  {
+    if (ucs2 < 0x80) {
+      *(out++) = ucs2;
+      return 0;
+    }
+    if (ucs2 >= 0x80  && ucs2 < 0x800) {
+      *(out++) = (ucs2 >> 6)   | 0xC0;
+      *(out++) = (ucs2 & 0x3F) | 0x80;
+      return 0;
+    }
+    if (ucs2 >= 0x800 && ucs2 < 0xFFFF) {
+      if (ucs2 >= 0xD800 && ucs2 <= 0xDFFF) {
+	/* Ill-formed. */
+	return 1;
+      }
+      *(out++) = ((ucs2 >> 12)       ) | 0xE0;
+      *(out++) = ((ucs2 >> 6 ) & 0x3F) | 0x80;
+      *(out++) = ((ucs2      ) & 0x3F) | 0x80;
+      return 0;
+    }
+    if (ucs2 >= 0x10000 && ucs2 < 0x10FFFF) {
+      /* http://tidy.sourceforge.net/cgi-bin/lxr/source/src/utf8.c#L380 */
+      *(out++) = 0xF0 | (ucs2 >> 18);
+      *(out++) = 0x80 | ((ucs2 >> 12) & 0x3F);
+      *(out++) = 0x80 | ((ucs2 >> 6) & 0x3F);
+      *(out++) = 0x80 | ((ucs2 & 0x3F));
+      return 0;
+    }
+    return 1;
+  }
+
+  /*
+    Takes a UTF-8 sequence and returns a string that's double quoted if it is required to parse
+    it as a contiguous entity that is not-altered (e.g. space-delimited strings).
+
+    If the string contains a comment character (%) or a null-terminator (0), it will be
+    quoted.
+
+    Non-space whitespace characters will be backslash-escaped with \n, \t, \v, \r, \b, \f.
+
+    Null-terminators are quoted with \0.
+
+    If ``mandatory_quoting`` is true, the string will automatically be double quoted.
+   */
+  template <class Iterator>
+  inline std::string get_quoted_string(Iterator begin, Iterator end, bool mandatory_quoting = false) {
+    std::ostringstream ostr;
+    bool contains_single_quote = false;
+    bool contains_white_space = false;
+    bool contains_double_quote = false;
+    bool contains_comment_char = false;
+    bool contains_terminator = false;
+    bool contains_special = false;
+    if (begin == end) {
+      return "\"\"";
+    }
+    if (!mandatory_quoting) {
+      for (Iterator it = begin; it != end; it++) {
+	char c = *it;
+	if (std::isspace(c)) {
+	  contains_white_space = true;
+	}
+	switch (c) {
+    case ',':
+    case '}':
+    case '{':
+      contains_special = true;
+      break;
+	case '\'':
+	  contains_single_quote = true;
+	  break;
+	case '\"':
+	  contains_double_quote = true;
+	  break;
+	case '%':
+	  contains_comment_char = true;
+	  break;
+	case '\0':
+	  contains_terminator = true;
+	  break;
+	default:
+	  break;
+	}
+      }
+    }
+    if (contains_special || contains_white_space || contains_single_quote || contains_double_quote || contains_comment_char || contains_terminator || mandatory_quoting) {
+      ostr << '"';
+      for (Iterator it = begin; it != end; it++) {
+	switch (*it) {
+	case '"':
+	  ostr << '\\' << '"';
+	  break;
+	case '\n':
+	  ostr << '\\' << 'n';
+	  break;
+	case '\t':
+	  ostr << '\\' << 't';
+	  break;
+	case '\r':
+	  ostr << '\\' << 'r';
+	  break;
+	case '\f':
+	  ostr << '\\' << 'f';
+	  break;
+	case '\b':
+	  ostr << '\\' << 'b';
+	  break;
+	case '\v':
+	  ostr << '\\' << 'v';
+	  break;
+	default:
+	  ostr << *it;
+	  break;
+	}
+      }
+      ostr << '"';
+      return ostr.str();
+    }
+    else {
+      return std::string(begin, end);
+    }
+  }
+
+  /*
+    Takes in a valid UTF-8 sequence defined by two iterators `begin` and `end`
+    where *begin is some quote character (e.g. '\"'). It returns an iterator
+    pointing to the ending unprocessed character (one after the quote
+    character).
+
+    Null-terminator escape sequences \0 are translated into spaces for
+    security reasons.
+   */
+  template <class Iterator, class OutputIterator>
+  inline Iterator parse_quoted_string(Iterator begin, Iterator end, OutputIterator out, const char quote_char) {
+    if (begin == end) {
+      return end;
+    }
+    if (*begin == quote_char) {
+      begin++;
+      while (begin != end) {
+	if (*begin == quote_char) {
+	  begin++;
+	  break;
+	}
+	else if (*begin == '\\') { // process escape characters
+	  if ((begin + 1) != end) {
+	    begin++;
+	    switch (*begin) {
+	    case 'n':
+	      *(out++) = '\n';
+	      break;
+	    case 't':
+	      *(out++) = '\t';
+	      break;
+	    case 'r':
+	      *(out++) = '\r';
+	      break;
+	    case 'b':
+	      *(out++) = '\b';
+	      break;
+	    case 'f':
+	      *(out++) = '\f';
+	      break;
+	    case 'x':
+	      {
+		int sumv = 0;
+		int multipliers[] = {0x10, 0x01};
+		for (int i = 0; i < 2; i++) {
+		  if (begin + 1 != end) {
+		    begin++;
+		    int digit = *begin;
+		    if (isxdigit(digit)) {
+		      sumv += multipliers[i] * get_decimal_from_ascii_hex(digit);
+		    }
+		  }
+		}
+		*(out++) = (unsigned char)sumv;
+	      }
+	      break;
+	    case 'u': /* handle the rare case where a UCS-2 literal is provided
+		         encoded as a sequence of 7-bit ASCII characters, e.g.
+		         the string "\\u7c7b".
+
+			 Note: WiseML does NOT support reading files
+			 encoded in UCS-2/UTF-16, only ASCII and
+			 UTF-8. This allows UCS-2 literals in
+			 non-UCS-2 ASCII files.
+                       */
+	      {
+		int sumv = 0;
+		int multipliers[] = {0x1000, 0x0100, 0x0010, 0x0001};
+		for (int i = 0; i < 4; i++) {
+		  if (begin + 1 != end) {
+		    begin++;
+		    int digit = *begin;
+		    if (isxdigit(digit)) {
+		      sumv += multipliers[i] * get_decimal_from_ascii_hex(digit);
+		    }
+		  }
+		}
+		ucs2_to_utf8(sumv, out);
+	      }
+	      break;
+	    case '0':
+	      *(out++) = ' ';
+	      break;
+	    default:
+	      *(out++) = *begin;
+	      break;
+	    }
+	  }
+	}
+	else {
+	  *(out++) = *begin;
+	}
+	begin++;
+      }
+    }
+    return begin;
+  }
+
   /*
     Returns an iterator to the first non-whitespace character, or if
     no whitespace characters are found in the sequence, an iterator
@@ -273,5 +509,13 @@
 done:
         return sign ? -fraction : fraction;
 }
+
+  inline std::string get_quoted_string(const std::string &s) {
+    return get_quoted_string(s.begin(), s.end(), false);
+  }
+
+  inline std::string get_mandatory_quoted_string(const std::string &s) {
+    return get_quoted_string(s.begin(), s.end(), true);
+  }
 
 #endif

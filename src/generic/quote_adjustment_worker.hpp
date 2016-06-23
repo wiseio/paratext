@@ -63,6 +63,7 @@ public:
     char buf[block_size];
     in.seekg(chunk_start_, std::ios_base::beg);
     size_t current = chunk_start_;
+    size_t escape_count = 0;
     bool in_quote = false;
     while (current <= chunk_end_) {
       in.read(buf, std::min(chunk_end_ - current + 1, block_size));
@@ -74,7 +75,18 @@ public:
       while (i < nread && first_unquoted_newline_ < 0 && first_quoted_newline_ < 0) {
         if (in_quote) {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              if (buf[i] == 'x') {
+                escape_count = 2;
+              }
+              else {
+                escape_count--;
+              }
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
               in_quote = false;
               i++;
@@ -89,7 +101,18 @@ public:
         }
         else {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              if (buf[i] == 'x') {
+                escape_count = 2;
+              }
+              else {
+                escape_count--;
+              }
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
               in_quote = true;
               i++;
@@ -106,7 +129,18 @@ public:
       while (i < nread && first_unquoted_newline_ < 0) {
         if (in_quote) {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              if (buf[i] == 'x') {
+                escape_count = 2;
+              }
+              else {
+                escape_count--;
+              }
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
               in_quote = false;
               i++;
@@ -116,7 +150,18 @@ public:
         }
         else {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              if (buf[i] == 'x') {
+                escape_count = 2;
+              }
+              else {
+                escape_count--;
+              }
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
               in_quote = true;
               i++;
@@ -133,7 +178,18 @@ public:
       while (i < nread && first_quoted_newline_ < 0) {
         if (in_quote) {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              if (buf[i] == 'x') {
+                escape_count = 2;
+              }
+              else {
+                escape_count--;
+              }
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
               in_quote = false;
               i++;
@@ -164,7 +220,18 @@ public:
       while (i < nread) {
         if (in_quote) {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              if (buf[i] == 'x') {
+                escape_count = 2;
+              }
+              else {
+                escape_count--;
+              }
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
               in_quote = false;
               i++;
@@ -174,7 +241,18 @@ public:
         }
         else {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              if (buf[i] == 'x') {
+                escape_count = 2;
+              }
+              else {
+                escape_count--;
+              }
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
               in_quote = true;
               i++;
