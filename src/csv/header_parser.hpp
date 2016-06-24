@@ -89,7 +89,7 @@ namespace CSV {
 
       std::string transformed_name;
       parse_unquoted_string(name.begin(), name.end(), std::back_inserter(transformed_name));
-      convert_null_to_space(name.begin(), name.end());
+      convert_null_to_space(transformed_name.begin(), transformed_name.end());
       column_names_.push_back(transformed_name);
     }
     
