@@ -44,7 +44,7 @@ namespace ParaText {
   };
 
   struct ParseParams {
-    ParseParams() : no_header(false), number_only(false), block_size(32768), num_threads(16), allow_quoted_newlines(false),  max_level_name_length(std::numeric_limits<size_t>::max()), max_levels(std::numeric_limits<size_t>::max()), compression(Compression::NONE), parser_type(ParserType::ROW_BASED) {}
+    ParseParams() : no_header(false), number_only(false), block_size(32768), num_threads(16), allow_quoted_newlines(false),  max_level_name_length(std::numeric_limits<size_t>::max()), max_levels(std::numeric_limits<size_t>::max()), compression(Compression::NONE), parser_type(ParserType::COL_BASED) {}
     bool no_header;
     bool number_only;
     bool compute_sum;

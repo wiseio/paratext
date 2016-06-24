@@ -520,7 +520,7 @@ namespace ParaText {
       else {
         const size_t sz(cat_buffer_.size());
         for (size_t i = 0; i < sz; i++) {
-          *it = cat_buffer_[i];
+          *it = (T)cat_buffer_[column_index][i];
           it++;
         }
       }
@@ -530,7 +530,7 @@ namespace ParaText {
     typename std::enable_if<std::is_same<T, std::string>::value, void>::type copy_column_impl(size_t column_index, OutputIterator it) const {
       if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
         std::ostringstream ostr;
-        ostr << "string output iterator expected for column " << column_index;
+        ostr << "numeric output iterator expected for column " << column_index << ", not std::string element type.";
         throw std::logic_error(ostr.str());
       } else if (column_infos_[column_index].semantics == Semantics::TEXT) {
         //std::cout << "^^^" << column_index << std::endl;
@@ -554,7 +554,7 @@ namespace ParaText {
     typename std::enable_if<std::is_same<T, std::string>::value, void>::type copy_column_and_forget_impl(size_t column_index, OutputIterator it) const {
       if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
         std::ostringstream ostr;
-        ostr << "string output iterator expected for column " << column_index;
+        ostr << "numeric output iterator expected for column " << column_index;
         throw std::logic_error(ostr.str());
       }
       else if (column_infos_[column_index].semantics == Semantics::TEXT) {

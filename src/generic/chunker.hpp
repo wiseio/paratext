@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <thread>
 #include <sstream>
+#include <vector>
 
 #include "quote_adjustment_worker.hpp"
 
