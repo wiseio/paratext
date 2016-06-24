@@ -257,7 +257,7 @@ public:
       throw std::logic_error(ostr.str());
     }
     if (definitely_string_) {
-      parse_quoted_string(token_.begin(), token_.end(), std::back_inserter(token_aux_), '\"');
+      parse_unquoted_string(token_.begin(), token_.end(), std::back_inserter(token_aux_));
       handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
       token_aux_.clear();
       definitely_string_ = false;
@@ -345,7 +345,7 @@ public:
         handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
       }
       else {
-        parse_quoted_string(token_.begin(), token_.end(), std::back_inserter(token_aux_), '\"');
+        parse_unquoted_string(token_.begin(), token_.end(), std::back_inserter(token_aux_));
         handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
         token_aux_.clear();
       }

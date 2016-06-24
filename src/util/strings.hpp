@@ -299,6 +299,98 @@
   }
 
   /*
+    Takes in a valid UTF-8 sequence defined by two iterators `begin` and `end`
+    where *begin is some quote character (e.g. '\"'). It returns an iterator
+    pointing to the ending unprocessed character (one after the quote
+    character).
+
+    Null-terminator escape sequences \0 are translated into spaces for
+    security reasons.
+   */
+  template <class Iterator, class OutputIterator>
+  inline Iterator parse_unquoted_string(Iterator begin, Iterator end, OutputIterator out) {
+    if (begin == end) {
+      return end;
+    }
+      while (begin != end) {
+
+	if (*begin == '\\') { // process escape characters
+	  if ((begin + 1) != end) {
+	    begin++;
+	    switch (*begin) {
+	    case 'n':
+	      *(out++) = '\n';
+	      break;
+	    case 't':
+	      *(out++) = '\t';
+	      break;
+	    case 'r':
+	      *(out++) = '\r';
+	      break;
+	    case 'b':
+	      *(out++) = '\b';
+	      break;
+	    case 'f':
+	      *(out++) = '\f';
+	      break;
+	    case 'x':
+	      {
+		int sumv = 0;
+		int multipliers[] = {0x10, 0x01};
+		for (int i = 0; i < 2; i++) {
+		  if (begin + 1 != end) {
+		    begin++;
+		    int digit = *begin;
+		    if (isxdigit(digit)) {
+		      sumv += multipliers[i] * get_decimal_from_ascii_hex(digit);
+		    }
+		  }
+		}
+		*(out++) = (unsigned char)sumv;
+	      }
+	      break;
+	    case 'u': /* handle the rare case where a UCS-2 literal is provided
+		         encoded as a sequence of 7-bit ASCII characters, e.g.
+		         the string "\\u7c7b".
+
+			 Note: WiseML does NOT support reading files
+			 encoded in UCS-2/UTF-16, only ASCII and
+			 UTF-8. This allows UCS-2 literals in
+			 non-UCS-2 ASCII files.
+                       */
+	      {
+		int sumv = 0;
+		int multipliers[] = {0x1000, 0x0100, 0x0010, 0x0001};
+		for (int i = 0; i < 4; i++) {
+		  if (begin + 1 != end) {
+		    begin++;
+		    int digit = *begin;
+		    if (isxdigit(digit)) {
+		      sumv += multipliers[i] * get_decimal_from_ascii_hex(digit);
+		    }
+		  }
+		}
+		ucs2_to_utf8(sumv, out);
+	      }
+	      break;
+	    case '0':
+	      *(out++) = ' ';
+	      break;
+	    default:
+	      *(out++) = *begin;
+	      break;
+	    }
+	  }
+	}
+	else {
+	  *(out++) = *begin;
+	}
+	begin++;
+      }
+    return begin;
+  }
+
+  /*
     Returns an iterator to the first non-whitespace character, or if
     no whitespace characters are found in the sequence, an iterator
     pointing to ``end``.
