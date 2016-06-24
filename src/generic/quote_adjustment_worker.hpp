@@ -179,7 +179,13 @@ public:
         }
         else {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
               in_quote = true;
               i++;

@@ -258,6 +258,7 @@ public:
     }
     if (definitely_string_) {
       parse_unquoted_string(token_.begin(), token_.end(), std::back_inserter(token_aux_));
+      convert_null_to_space(token_aux_.begin(), token_aux_.end());
       handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
       token_aux_.clear();
       definitely_string_ = false;
@@ -346,6 +347,7 @@ public:
       }
       else {
         parse_unquoted_string(token_.begin(), token_.end(), std::back_inserter(token_aux_));
+        convert_null_to_space(token_aux_.begin(), token_aux_.end());
         handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
         token_aux_.clear();
       }

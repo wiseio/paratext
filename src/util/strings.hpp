@@ -112,12 +112,7 @@
     Takes a UTF-8 sequence and returns a string that's double quoted if it is required to parse
     it as a contiguous entity that is not-altered (e.g. space-delimited strings).
 
-    If the string contains a comment character (%) or a null-terminator (0), it will be
-    quoted.
-
     Non-space whitespace characters will be backslash-escaped with \n, \t, \v, \r, \b, \f.
-
-    Null-terminators are quoted with \0.
 
     If ``mandatory_quoting`` is true, the string will automatically be double quoted.
    */
@@ -205,9 +200,6 @@
     where *begin is some quote character (e.g. '\"'). It returns an iterator
     pointing to the ending unprocessed character (one after the quote
     character).
-
-    Null-terminator escape sequences \0 are translated into spaces for
-    security reasons.
    */
   template <class Iterator, class OutputIterator>
   inline Iterator parse_quoted_string(Iterator begin, Iterator end, OutputIterator out, const char quote_char) {
@@ -281,7 +273,7 @@
 	      }
 	      break;
 	    case '0':
-	      *(out++) = ' ';
+	      *(out++) = '\0';
 	      break;
 	    default:
 	      *(out++) = *begin;
@@ -374,7 +366,7 @@
 	      }
 	      break;
 	    case '0':
-	      *(out++) = ' ';
+	      *(out++) = '\0';
 	      break;
 	    default:
 	      *(out++) = *begin;
@@ -388,6 +380,15 @@
 	begin++;
       }
     return begin;
+  }
+
+  template <class Iterator>
+  void convert_null_to_space(Iterator begin, Iterator end) {
+    for (Iterator it = begin; it != end; it++) {
+      if (*it == '\0') {
+        *it = ' ';
+      }
+    }
   }
 
   /*
