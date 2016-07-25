@@ -180,6 +180,11 @@ namespace CSV {
       return cat_data_.get<size_t>(i);
     }
 
+    template <class T, bool Numeric>
+    inline typename std::enable_if<std::is_same<std::string, T>::value && !Numeric, T>::type get(size_t i) const {
+      return text_data_[i];
+    }
+
     const std::vector<std::string> &get_cat_keys() const {
       return cat_keys_;
     }
