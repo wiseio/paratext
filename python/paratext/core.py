@@ -84,6 +84,12 @@ _csv_load_params_doc = """
     num_names : sequence
         A list of column names that should be treated as numeric
         regardless of its inferred type.
+
+    in_encoding : str
+        The encoding of the data read from the file. (default=None)
+
+    out_encoding : str
+        The encoding of the strings returned.
 """
 
 def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None):
@@ -113,7 +119,7 @@ def _make_posix_filename(fn_or_uri):
      return result
 
 @_docstring_parameter(_csv_load_params_doc)
-def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None):
+def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None, in_encoding=None, out_encoding=None):
     """
     Creates a ParaText internal C++ CSV reader object and reads the CSV
     file in parallel. This function ordinarily should not be called directly.
@@ -158,6 +164,14 @@ def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=Fa
         for name in text_names:
             name = encoder(name)
             loader.force_semantics(name, pti.TEXT)
+    if in_encoding is not None and in_encoding not in ("utf-8", "unknown"):
+        raise ValueError("invalid encoding: " % in_encoding)
+    if out_encoding is not None and out_encoding not in ("utf-8", "unknown"):
+        raise ValueError("invalid encoding: " % out_encoding)
+    if in_encoding == "utf-8":
+        loader.set_in_encoding(pti.UNICODE_UTF8)
+    if out_encoding == "utf-8":
+        loader.set_out_encoding(pti.UNICODE_UTF8)
     loader.load(_make_posix_filename(filename), params)
     return loader
 

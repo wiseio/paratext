@@ -30,6 +30,7 @@
 
 #include <string>
 #include <limits>
+#include "generic/encoding.hpp"
 
 namespace ParaText {
 
@@ -37,6 +38,9 @@ namespace ParaText {
   typedef enum {NONE, SNAPPY, MSGPACK} Compression;
 
   typedef enum {CATEGORICAL, NUMERIC, TEXT, UNKNOWN} Semantics;
+
+  template <class T, int InEncoding, int OutEncoding>
+  struct TagEncoding {};
 
   struct ColumnInfo {
     std::string name;

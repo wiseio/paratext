@@ -264,6 +264,17 @@ public:
     first_quoted_newline_ = 0;
   }
 
+  void combine_adjacent(const QuoteNewlineAdjustmentWorker &other) {
+    chunk_end_ = other.chunk_end_;
+    num_quotes_ += other.num_quotes_;
+    if (first_unquoted_newline_ < 0) {
+      first_unquoted_newline_ = other.first_unquoted_newline_;
+    }
+    if (first_quoted_newline_ < 0) {
+      first_quoted_newline_ = other.first_quoted_newline_;
+    }
+  }
+
 private:
   size_t chunk_start_;
   size_t chunk_end_;

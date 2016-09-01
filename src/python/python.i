@@ -45,15 +45,15 @@
 }
 
 %typemap(out) std::vector<int> {
-  $result = (PyObject*)::build_array<std::vector<int>>($1);
+  $result = (PyObject*)::build_array<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNKNOWN_BYTES, std::vector<int>>($1);
 }
 
 %typemap(out) std::vector<double> {
-  $result = (PyObject*)::build_array<std::vector<double>>($1);
+  $result = (PyObject*)::build_array<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNKNOWN_BYTES, std::vector<double>>($1);
 }
 
 %typemap(out) std::vector<size_t> {
-  $result = (PyObject*)::build_array<std::vector<size_t>>($1);
+  $result = (PyObject*)::build_array<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNKNOWN_BYTES, std::vector<size_t>>($1);
 }
 
 %typemap(out) const std::vector<std::string> & {
@@ -63,11 +63,37 @@
 }
 
 %typemap(out) std::vector<std::string> {
-  $result = (PyObject*)::build_array<std::vector<std::string>>($1);
+  $result = (PyObject*)::build_array<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNICODE_UTF8, std::vector<std::string>>($1);
+}
+
+%typemap(out) const std::vector<std::string> & {
+  { auto range = std::make_pair($1->begin(), $1->end());
+    $result = (PyObject*)::build_array_from_range<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNKNOWN_BYTES>(range);
+  }
+}
+
+%typemap(out) const std::pair<std::vector<std::string>, ParaText::TagEncoding<UNICODE_UTF8, UNICODE_UTF8> > & {
+  { auto range = std::make_pair($1->begin(), $1->end());
+    $result = (PyObject*)::build_array_from_range<ParaText::Encoding::UNICODE_UTF8>>(range);
+  }
+}
+
+%typemap(out) const std::pair<std::vector<std::string>, ParaText::TagEncoding<UNNOWN_BYTES, UNICODE_UTF8> > & {
+  { auto range = std::make_pair($1->begin(), $1->end());
+    $result = (PyObject*)::build_array_from_range<ParaText::Encoding::UNICODE_UTF8>>(range);
+  }
+}
+
+%typemap(out) std::vector<std::string> {
+  $result = (PyObject*)::build_array<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNICODE_UTF8, std::vector<std::string>>($1);
 }
 
 %typemap(out) ParaText::CSV::ColBasedPopulator {
   $result = (PyObject*)::build_populator<ParaText::CSV::ColBasedPopulator>($1);
+}
+
+%typemap(out) ParaText::CSV::StringVectorPopulator {
+  $result = (PyObject*)::build_populator<ParaText::CSV::StringVectorPopulator>($1);
 }
 
 %{

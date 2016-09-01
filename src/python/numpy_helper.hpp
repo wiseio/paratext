@@ -36,6 +36,8 @@
 #include <memory>
 #include <iostream>
 
+#include "../generic/encoding.hpp"
+
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include <numpy/arrayobject.h>
 #include <numpy/npy_math.h>
@@ -60,15 +62,61 @@ template <> struct numpy_type<std::string>  { static const long id = NPY_OBJECT;
 template <> struct numpy_type<unsigned long>  { static const long id = NPY_ULONG; };
 #endif
 
+template <int InEncoding, int OutEncoding>
+struct AsPythonString {};
+
+template <>
+struct AsPythonString<ParaText::Encoding::UNKNOWN_BYTES,
+                      ParaText::Encoding::UNICODE_UTF8> {
+  PyObject *operator()(const std::string &in) const {
+    return PyUnicode_FromStringAndSize(in.c_str(), in.size());
+  }
+};
+
+template <>
+struct AsPythonString<ParaText::Encoding::UNKNOWN_BYTES,
+                      ParaText::Encoding::UNKNOWN_BYTES> {
+  PyObject *operator()(const std::string &in) const {
+#if PY_MAJOR_VERSION >= 3
+    return PyBytes_FromStringAndSize(in.c_str(), in.size());
+#else
+    return PyString_FromStringAndSize(in.c_str(), in.size());
+#endif
+  }
+};
+
+template <>
+struct AsPythonString<ParaText::Encoding::UNICODE_UTF8,
+                      ParaText::Encoding::UNKNOWN_BYTES> {
+  PyObject *operator()(const std::string &in) const {
+#if PY_MAJOR_VERSION >= 3
+    return PyBytes_FromStringAndSize(in.c_str(), in.size());
+#else
+    return PyString_FromStringAndSize(in.c_str(), in.size());
+#endif
+  }
+};
+
+template <>
+struct AsPythonString<ParaText::Encoding::UNICODE_UTF8,
+                      ParaText::Encoding::UNICODE_UTF8> {
+  PyObject *operator()(const std::string &in) const {
+    return PyUnicode_FromStringAndSize(in.c_str(), in.size());
+  }
+};
+
+
+template <int InEncoding, int OutEncoding>
 inline PyObject *as_python_string(const std::string &in) {
-  return PyUnicode_FromStringAndSize(in.c_str(), in.size());
+  AsPythonString<InEncoding, OutEncoding> encoder;
+  return encoder(in);
 }
 
-template <class Container, class Enable=void>
+template <class Container, int InEncoding, int OutEncoding, class Enable=void>
 struct build_array_impl {};
 
-template <class Container>
-struct build_array_impl<Container, typename std::enable_if<std::is_arithmetic<typename Container::value_type>::value>::type> {
+template <class Container, int InEncoding, int OutEncoding>
+struct build_array_impl<Container, InEncoding, OutEncoding, typename std::enable_if<std::is_arithmetic<typename Container::value_type>::value>::type> {
   typedef typename Container::value_type value_type;
 
   static PyObject *build_array(const Container &container) {
@@ -90,8 +138,8 @@ struct build_array_impl<Container, typename std::enable_if<std::is_arithmetic<ty
 
 };
 
-template <class Container>
-struct build_array_impl<Container, typename std::enable_if<std::is_same<typename Container::value_type, std::string>::value>::type> {
+template <class Container, int InEncoding, int OutEncoding>
+struct build_array_impl<Container, InEncoding, OutEncoding, typename std::enable_if<std::is_same<typename Container::value_type, std::string>::value>::type> {
 
   typedef typename Container::value_type value_type;
 
@@ -102,7 +150,7 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
     try {
       for (size_t i = 0; i < container.size(); i++) {
         PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
-        PyObject *newobj = as_python_string(container[i]);
+        PyObject *newobj = as_python_string<InEncoding, OutEncoding>(container[i]);
         Py_XDECREF(*ref);
         *ref = newobj;
       }
@@ -123,11 +171,11 @@ struct build_array_impl<Container, typename std::enable_if<std::is_same<typename
 };
 
 
-template <class Iterator, class Enable=void>
+template <class Iterator, int InEncoding, int OutEncoding, class Enable=void>
 struct build_array_from_range_impl {};
 
-template <class Iterator>
-struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_arithmetic<typename std::iterator_traits<Iterator>::value_type>::value>::type> {
+template <class Iterator, int InEncoding, int OutEncoding>
+struct build_array_from_range_impl<Iterator, InEncoding, OutEncoding, typename std::enable_if<std::is_arithmetic<typename std::iterator_traits<Iterator>::value_type>::value>::type> {
   typedef typename Iterator::value_type value_type;
 
   static PyObject *build_array(const std::pair<Iterator, Iterator> &range) {
@@ -150,8 +198,8 @@ struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_ari
   }
 };
 
-template <class Iterator>
-struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_same<typename std::iterator_traits<Iterator>::value_type, std::string>::value>::type> {
+template <class Iterator, int InEncoding, int OutEncoding>
+struct build_array_from_range_impl<Iterator, InEncoding, OutEncoding, typename std::enable_if<std::is_same<typename std::iterator_traits<Iterator>::value_type, std::string>::value>::type> {
 
   typedef typename Iterator::value_type value_type;
 
@@ -163,7 +211,7 @@ struct build_array_from_range_impl<Iterator, typename std::enable_if<std::is_sam
       size_t i = 0;
       for (Iterator it = range.first; it != range.second; it++, i++) {
         PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
-        PyObject *newobj = as_python_string(*it);
+        PyObject *newobj = as_python_string<InEncoding, OutEncoding>(*it);
         Py_XDECREF(*ref);
         *ref = newobj;
       }
@@ -217,11 +265,12 @@ struct derived_insert_populator_impl : public base_insert_populator_impl<Populat
 };
 
 
+template <int InEncoding, int OutEncoding>
 struct string_array_output_iterator  : public std::iterator<std::forward_iterator_tag, std::string> {
   string_array_output_iterator(PyArrayObject *array) : i(0), array(array) {}
 
   inline string_array_output_iterator &operator++() {
-    PyObject *s = as_python_string(output);
+    PyObject *s = as_python_string<InEncoding, OutEncoding>(output);
     PyObject **ref = (PyObject **)PyArray_GETPTR1((PyArrayObject*)array, i);
     Py_XDECREF(*ref);
     *ref = s;
@@ -250,12 +299,32 @@ struct derived_insert_populator_impl<Populator, std::string> : public base_inser
   virtual ~derived_insert_populator_impl() {}
 
   virtual PyObject *populate(const Populator &populator) {
+    using ParaText::Encoding;
     npy_intp fdims[] = {(npy_intp)populator.size()};
     PyObject *array = NULL;
     array = (PyObject*)PyArray_SimpleNew(1, fdims, numpy_type<value_type>::id);
     try {
-      string_array_output_iterator oit((PyArrayObject*)array);
-      populator.insert_and_forget(oit);
+      ParaText::Encoding in = populator.get_in_encoding();
+      ParaText::Encoding out = populator.get_out_encoding();
+      if (in == Encoding::UNKNOWN_BYTES && out == Encoding::UNKNOWN_BYTES) {
+        string_array_output_iterator<Encoding::UNKNOWN_BYTES, Encoding::UNKNOWN_BYTES> oit((PyArrayObject*)array);
+        populator.insert_and_forget(oit);
+      }
+      else if (in == Encoding::UNICODE_UTF8 && out == Encoding::UNKNOWN_BYTES) {
+        string_array_output_iterator<Encoding::UNICODE_UTF8, Encoding::UNKNOWN_BYTES> oit((PyArrayObject*)array);
+        populator.insert_and_forget(oit);
+      }
+      else if (in == Encoding::UNICODE_UTF8 && out == Encoding::UNICODE_UTF8) {
+        string_array_output_iterator<Encoding::UNICODE_UTF8, Encoding::UNICODE_UTF8> oit((PyArrayObject*)array);
+        populator.insert_and_forget(oit);
+      }
+      else if (in == Encoding::UNKNOWN_BYTES && out == Encoding::UNICODE_UTF8) {
+        string_array_output_iterator<Encoding::UNKNOWN_BYTES, Encoding::UNICODE_UTF8> oit((PyArrayObject*)array);
+        populator.insert_and_forget(oit);
+      }
+      else {
+        throw std::logic_error("unknown encoding");
+      }
     }
     catch (...) {
       Py_XDECREF(array);
@@ -299,14 +368,14 @@ PyObject *build_populator(const Populator &populator) {
   return it->second->populate(populator);
 }
 
-template <class Container>
+template <int InEncoding, int OutEncoding, class Container>
 PyObject *build_array(const Container &container) {
-  return (PyObject*)build_array_impl<Container>::build_array(container);
+  return (PyObject*)build_array_impl<Container, InEncoding, OutEncoding>::build_array(container);
 }
 
-template <class Iterator>
+template <int InEncoding, int OutEncoding, class Iterator>
 PyObject *build_array_from_range(const std::pair<Iterator, Iterator> &range) {
-  return (PyObject*)build_array_from_range_impl<Iterator>::build_array(range);
+  return (PyObject*)build_array_from_range_impl<Iterator, InEncoding, OutEncoding>::build_array(range);
 }
 
 #endif

@@ -105,28 +105,44 @@ namespace ParaText {
       Returns the (start, end) boundaries of a specific chunk. The ending
       index is always inclusive.
      */
-    std::pair<size_t, size_t> get_chunk(size_t index) const {
+    std::pair<long, long> get_chunk(size_t index) const {
       return std::make_pair(start_of_chunk_[index], end_of_chunk_[index]);
     }
 
   private:
     void compute_offsets(bool allow_quoted_newlines = true) {
-      const size_t chunk_size = (length_ - starting_offset_) / maximum_chunks_;
-      size_t start_of_chunk = starting_offset_;
+      const size_t chunk_size = std::max(2L, (long)((length_ - starting_offset_) / maximum_chunks_));
+      long start_of_chunk = starting_offset_;
 #ifdef PARALOAD_DEBUG
       std::cerr << "number of threads: " << maximum_chunks_ << std::endl;
       std::cerr << "length: " << length_ << std::endl;
 #endif
       for (size_t worker_id = 0; worker_id < maximum_chunks_; worker_id++) {
-        size_t end_of_chunk = std::min(lastpos_, start_of_chunk + chunk_size);
-        if (worker_id == maximum_chunks_ - 1) {
-          end_of_chunk = lastpos_;
-        }
+        long end_of_chunk = std::min(lastpos_, start_of_chunk + (long)chunk_size);
 #ifdef PARALOAD_DEBUG
         std::cout << "start_of_chunk: " << start_of_chunk << " end_of_chunk: " << end_of_chunk << std::endl;
 #endif
+        in_.clear();
+        in_.seekg(end_of_chunk - 1, std::ios_base::beg);
+        char buf[2];
+        in_.read(buf, 2);
+        size_t nread = in_.gcount();
+        if (nread == 2 && buf[0] != '\\' && buf[1] == '\\') {
+          if (end_of_chunk + 1 > lastpos_) {
+            std::ostringstream ostr;
+            ostr << "The file ends with an escape character";
+            throw std::logic_error(ostr.str());
+          }
+          end_of_chunk = end_of_chunk + 1;
+        }
+        if (worker_id == maximum_chunks_ - 1) {
+          end_of_chunk = lastpos_;
+        }
         start_of_chunk_.push_back(start_of_chunk);
         end_of_chunk_.push_back(end_of_chunk);
+        if (end_of_chunk == lastpos_) {
+          break;
+        }
         start_of_chunk = std::min(lastpos_, end_of_chunk + 1);
       }
       if (allow_quoted_newlines) {
@@ -141,13 +157,14 @@ namespace ParaText {
       const size_t block_size = 512;
       char buf[block_size];
       for (size_t worker_id = 0; worker_id < start_of_chunk_.size(); worker_id++) {
-        if (start_of_chunk_[worker_id] == end_of_chunk_[worker_id]) {
+        if (start_of_chunk_[worker_id] < 0 || end_of_chunk_[worker_id] < 0) {
           continue;
         }
+        in_.clear();
         in_.seekg(end_of_chunk_[worker_id], std::ios_base::beg);
-        size_t new_end = end_of_chunk_[worker_id];
+        long new_end = end_of_chunk_[worker_id];
         bool new_end_found = false;
-        size_t current = new_end;
+        long current = new_end;
         while (in_ && !new_end_found) {
           in_.read(buf, block_size);
           size_t nread = in_.gcount();
@@ -157,19 +174,21 @@ namespace ParaText {
           for (size_t i = 0; i < nread; i++) {
             if (buf[i] == '\n') {
               new_end = current + i;
-              i++;
               new_end_found = true;
             break;
             }
           }
           current += nread;
         }
+        if (!new_end_found) {
+          new_end = lastpos_;
+        }
         end_of_chunk_[worker_id] = new_end;
         for (size_t other_worker_id = worker_id + 1; other_worker_id < start_of_chunk_.size(); other_worker_id++) {
-          if (start_of_chunk_[other_worker_id] < new_end && end_of_chunk_[other_worker_id] < new_end) {
-            start_of_chunk_[other_worker_id] = 0;
-            end_of_chunk_[other_worker_id] = 0;
-          } else if (start_of_chunk_[other_worker_id] < new_end) {
+          if (end_of_chunk_[other_worker_id] <= new_end || new_end == lastpos_) {
+            start_of_chunk_[other_worker_id] = -1;
+            end_of_chunk_[other_worker_id] = -1;
+          } else if (start_of_chunk_[other_worker_id] <= new_end) {            
             start_of_chunk_[other_worker_id] = new_end + 1;
             end_of_chunk_[other_worker_id] = std::max(end_of_chunk_[other_worker_id], new_end + 1);
           }
@@ -192,7 +211,7 @@ namespace ParaText {
           thread_exception = workers[thread_id]->get_exception();
         }
       }
-      // We're now outside the parallel region.q
+      // We're now outside the parallel region.
       if (thread_exception) {
         std::rethrow_exception(thread_exception);
       }
@@ -201,10 +220,9 @@ namespace ParaText {
       size_t next_wid = 1;
       quotes_so_far += workers[cur_wid]->get_num_quotes();
       while (cur_wid < workers.size()) {
-        //std::cerr << "," << cur_wid;
         if (end_of_chunk_[cur_wid] == start_of_chunk_[cur_wid]) {
-          start_of_chunk_[cur_wid] = 0;
-          end_of_chunk_[cur_wid] = 0;
+          start_of_chunk_[cur_wid] = -1;
+          end_of_chunk_[cur_wid] = -1;
           cur_wid++;
           next_wid = cur_wid + 1;
           continue;
@@ -219,8 +237,8 @@ namespace ParaText {
             }
             else {
               end_of_chunk_[cur_wid] = end_of_chunk_[next_wid];
-              start_of_chunk_[next_wid] = 0;
-              end_of_chunk_[next_wid] = 0;
+              start_of_chunk_[next_wid] = -1;
+              end_of_chunk_[next_wid] = -1;
             }
             next_wid++;
           }
@@ -239,8 +257,8 @@ namespace ParaText {
             }
             else {
               end_of_chunk_[cur_wid] = end_of_chunk_[next_wid];
-              start_of_chunk_[next_wid] = 0;
-              end_of_chunk_[next_wid] = 0;
+              start_of_chunk_[next_wid] = -1;
+              end_of_chunk_[next_wid] = -1;
             }
             next_wid++;
           }
@@ -258,10 +276,10 @@ namespace ParaText {
     std::string filename_;
     size_t maximum_chunks_;
     size_t length_;
-    size_t lastpos_;
-    size_t starting_offset_;
-    std::vector<size_t> start_of_chunk_;
-    std::vector<size_t> end_of_chunk_;
+    long lastpos_;
+    long starting_offset_;
+    std::vector<long> start_of_chunk_;
+    std::vector<long> end_of_chunk_;
   };
 }
 #endif

@@ -38,6 +38,7 @@
 %include "std_pair.i"
 
 %ignore ParaText::CSV::ColBasedPopulator::get_type_index() const;
+%ignore ParaText::CSV::StringVectorPopulator::get_type_index() const;
 %ignore ParaText::CSV::ColBasedLoader::get_type_index(size_t) const;
 %ignore ParaText::CSV::ColBasedIterator::operator++();
 %ignore ParaText::CSV::ColBasedIterator::operator++(int);
@@ -56,6 +57,11 @@ namespace std {
 %include "generic/parse_params.hpp"
 %{
 #include "generic/parse_params.hpp"
+%}
+
+%include "generic/encoding.hpp"
+%{
+#include "generic/encoding.hpp"
 %}
 
 //////// CSV-loading Stuff
