@@ -69,7 +69,8 @@
    */
   template <class Iterator>
   inline Iterator eat_whitespace(Iterator begin, Iterator end) {
-    while (begin != end && std::isspace(*begin)) { ++begin; }
+    const std::locale loc("");
+    while (begin != end && std::isspace(*begin, loc)) { ++begin; }
     return begin;
   }
 

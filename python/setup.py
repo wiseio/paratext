@@ -4,7 +4,11 @@ import json
 
 # First, check for the presence of swig, which we will need to build
 # the Python bindings.
-p = subprocess.Popen(["which", "swig"])
+if sys.platform == "win32":
+    cmd = "where" # no 'which' command on windows
+else:
+    cmd = "which"
+p = subprocess.Popen([cmd, "swig"])
 p.communicate("")
 if p.returncode != 0:
     print("Error: you must install SWIG first.")
@@ -18,11 +22,16 @@ extra_libraries = []
 if sys.platform == 'darwin':
     extra_compile_args += ["-m64", "-D_REENTRANT"]
     extra_link_args += []
-    extra_libraries += []
+    extra_libraries += ["stdc++"]
 elif sys.platform.startswith("linux"):
     extra_compile_args += []
     extra_link_args += []
-    extra_libraries += []
+    extra_libraries += ["stdc++"]
+elif sys.platform == "win32":
+    extra_link_args = []
+    extra_compile_args = ["/Wall"]
+    extra_libraries = []
+    
 
 if len(set(('develop', 'release', 'bdist_egg', 'bdist_rpm',
             'bdist_wininst', 'install_egg_info', 'build_sphinx',
@@ -84,7 +93,7 @@ See README
                              extra_link_args = extra_link_args,
                              extra_compile_args = extra_compile_args,
                              include_dirs=['../src/'],
-                             libraries=["stdc++"] + extra_libraries),
+                             libraries = extra_libraries),
                    ],
       py_modules=["paratext_internal"],
       author="Damian Eads",

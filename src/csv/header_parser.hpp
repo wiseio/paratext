@@ -101,7 +101,11 @@ namespace CSV {
       std::string token;
       size_t current = 0;
       size_t block_size = 4096;
+#ifndef _WIN32
       char buf[block_size];
+#else
+      char *buf = (char *)_malloca(block_size);
+#endif
       char quote_started = 0;
       in_.seekg(0, std::ios_base::beg);
       while (current < length_) {

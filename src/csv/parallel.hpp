@@ -51,7 +51,7 @@ F parallel_for_each(Iterator first, Iterator last, size_t suggested_num_threads,
     return std::move(f);
   }
   const size_t num_threads =
-      std::min(std::max(1UL, suggested_num_threads), num_elements);
+      std::min(std::max(1UL, (unsigned long)suggested_num_threads), (unsigned long)num_elements);
   const std::size_t elements_thread = num_elements / num_threads;
   const std::size_t excess = num_elements % num_threads;
 
