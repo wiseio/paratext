@@ -16,17 +16,17 @@ if p.returncode != 0:
 
 # The multi-threaded reader will core dump unless -pthread is given.
 extra_link_args = []
-extra_compile_args = ["stdc++", "-std=c++11", "-Wall", "-Wextra", "-pthread"]
+extra_compile_args = ["-std=c++11", "-Wall", "-Wextra", "-pthread"]
 extra_libraries = []
 
 if sys.platform == 'darwin':
     extra_compile_args += ["-m64", "-D_REENTRANT"]
     extra_link_args += []
-    extra_libraries += []
+    extra_libraries += ["stdc++"]
 elif sys.platform.startswith("linux"):
     extra_compile_args += []
     extra_link_args += []
-    extra_libraries += []
+    extra_libraries += ["stdc++"]
 elif sys.platform == "win32":
     extra_link_args = []
     extra_compile_args = ["/Wall"]
