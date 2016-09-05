@@ -34,6 +34,7 @@
 #include <fstream>
 #include <exception>
 #include <stdexcept>
+#include <locale>
 
 namespace ParaText {
 
@@ -86,7 +87,11 @@ public:
     size_t current = begin;
     size_t spos_line = begin, epos_line = begin;
     const size_t block_size = params.block_size;
+#ifndef _WIN32
     char buf[block_size];
+#else
+    char *buf = (char *)_malloca(block_size);
+#endif
     in.seekg(current, std::ios_base::beg);
     definitely_string_ = false;
 #ifdef PARALOAD_DEBUG
@@ -267,7 +272,8 @@ public:
       }
       if (!handled) {
         if (i < token_.size()) {
-          integer_possible = std::isdigit(token_[i]);
+          const std::locale loc("");
+          integer_possible = std::isdigit(token_[i], loc);
           i++;
           float_possible = integer_possible, exp_possible = integer_possible;
           while (i < token_.size() && integer_possible) {

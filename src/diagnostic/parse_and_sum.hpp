@@ -75,7 +75,11 @@ public:
     std::ifstream in;
     in.open(filename.c_str());
     const size_t block_size = block_size_;
-    char buf[block_size];
+#ifndef _WIN32
+      char buf[block_size];
+#else
+      char *buf = (char *)_malloca(block_size);
+#endif
     in.seekg(chunk_start_, std::ios_base::beg);
     size_t current = chunk_start_;
     sums_.resize(num_columns_);

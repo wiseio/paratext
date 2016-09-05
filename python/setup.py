@@ -16,7 +16,7 @@ if p.returncode != 0:
 
 # The multi-threaded reader will core dump unless -pthread is given.
 extra_link_args = []
-extra_compile_args = ["-std=c++11", "-Wall", "-Wextra", "-pthread"]
+extra_compile_args = ["stdc++", "-std=c++11", "-Wall", "-Wextra", "-pthread"]
 extra_libraries = []
 
 if sys.platform == 'darwin':
@@ -29,7 +29,7 @@ elif sys.platform.startswith("linux"):
     extra_libraries += []
 elif sys.platform == "win32":
     extra_link_args = []
-    extra_compile_args = []
+    extra_compile_args = ["/Wall"]
     extra_libraries = []
     
 
@@ -93,7 +93,7 @@ See README
                              extra_link_args = extra_link_args,
                              extra_compile_args = extra_compile_args,
                              include_dirs=['../src/'],
-                             libraries=["stdc++"] + extra_libraries),
+                             libraries = extra_libraries),
                    ],
       py_modules=["paratext_internal"],
       author="Damian Eads",
