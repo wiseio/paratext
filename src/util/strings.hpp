@@ -28,6 +28,10 @@
 #ifndef WISEIO_STRINGS_HPP
 #define WISEIO_STRINGS_HPP
 
+#include <string>
+#include <memory>
+#include <sstream>
+
   template <class T>
   struct content_hash {};
 
@@ -117,7 +121,7 @@
     If ``mandatory_quoting`` is true, the string will automatically be double quoted.
    */
   template <class Iterator>
-  inline std::string get_quoted_string(Iterator begin, Iterator end, bool mandatory_quoting = false) {
+  inline std::string get_quoted_string(Iterator begin, Iterator end, bool mandatory_quoting = false, bool do_not_escape_newline = false) {
     std::ostringstream ostr;
     bool contains_single_quote = false;
     bool contains_white_space = false;
@@ -134,10 +138,15 @@
 	if (std::isspace(c)) {
 	  contains_white_space = true;
 	}
+    else if (c < 32 || c >= 127) {
+      contains_special = true;
+    }
+    else {
 	switch (c) {
     case ',':
     case '}':
     case '{':
+    case '\\':
       contains_special = true;
       break;
 	case '\'':
@@ -155,6 +164,7 @@
 	default:
 	  break;
 	}
+    }
       }
     }
     if (contains_special || contains_white_space || contains_single_quote || contains_double_quote || contains_comment_char || contains_terminator || mandatory_quoting) {
@@ -164,8 +174,15 @@
 	case '"':
 	  ostr << '\\' << '"';
 	  break;
+	case '\\':
+	  ostr << '\\' << '\\';
+	  break;
 	case '\n':
-	  ostr << '\\' << 'n';
+      if (do_not_escape_newline) {
+        ostr << '\n';
+      } else {
+        ostr << '\\' << 'n';
+      }
 	  break;
 	case '\t':
 	  ostr << '\\' << 't';
@@ -324,6 +341,9 @@
 	      break;
 	    case 'f':
 	      *(out++) = '\f';
+	      break;
+	    case 'v':
+	      *(out++) = '\v';
 	      break;
 	    case 'x':
 	      {
@@ -604,11 +624,11 @@ done:
 }
 
   inline std::string get_quoted_string(const std::string &s) {
-    return get_quoted_string(s.begin(), s.end(), false);
+    return get_quoted_string(s.begin(), s.end(), false, false);
   }
 
   inline std::string get_mandatory_quoted_string(const std::string &s) {
-    return get_quoted_string(s.begin(), s.end(), true);
+    return get_quoted_string(s.begin(), s.end(), true, false);
   }
 
 #endif

@@ -1,59 +1,11 @@
-from contextlib import contextmanager
 import os
-import pandas.util.testing
 import unittest
-import paratext
+import paratext.testing
+from paratext.testing import assert_dictframe_almost_equal, generate_tempfile, generate_tempfilename
+import pandas.util.testing
 import numpy as np
-from tempfile import NamedTemporaryFile
+
 from nose_parameterized import parameterized
-
-@contextmanager
-def generate_tempfile(filedata):
-    f = NamedTemporaryFile(delete=False, prefix="paratext-tests")
-    f.write(filedata.encode("utf-8"))
-    name = f.name
-    f.close()
-    yield f.name
-    os.remove(name)
-
-def assert_seq_almost_equal(left, right):
-    left = np.asarray(left)
-    right = np.asarray(right)
-    if np.issubdtype(left.dtype, np.integer) and np.issubdtype(right.dtype, np.integer):
-        if not (left == right).all():
-            m = (left != right).mean() * 100
-            raise AssertionError("integer sequences mismatch: %5.5f%%" % (m,))
-    elif np.issubdtype(left.dtype, np.floating) and np.issubdtype(right.dtype, np.floating):
-        np.testing.assert_almost_equal(left, right)
-    else:
-        if np.issubdtype(left.dtype, np.floating):
-            left_float = left
-        else:
-            left_float = np.asarray(left, dtype=np.float_)
-        if np.issubdtype(right.dtype, np.floating):
-            right_float = right
-        else:
-            right_float = np.asarray(right, dtype=np.float_)
-        np.testing.assert_almost_equal(left_float, right_float)
-
-def assert_dictframe_almost_equal(left, right):
-    left_keys = set(left.keys())
-    right_keys = set(right.keys())
-    left_missing = right_keys - left_keys
-    right_missing = left_keys - right_keys
-    together = left_keys.intersection(right_keys)
-    msg = ""
-    for key in left_missing:
-        msg += "%s: missing on left\n" % key
-    for key in right_missing:
-        msg += "%s: missing on right\n" % key
-    for key in together:
-        try:
-            assert_seq_almost_equal(left[key], right[key])
-        except AssertionError as e:
-            msg += "\n Column %s: %s" % (key, e.args[0])
-    if len(msg) > 0:
-        raise AssertionError(msg)
 
 class TestBasicFiles(unittest.TestCase):
 
@@ -152,20 +104,15 @@ class TestBasicFiles(unittest.TestCase):
             assert_dictframe_almost_equal(actual, expected)
 
 
-    @parameterized.expand([
-        ["foo", "a", "a",],
-        ["bar", "a", "b"],
-        ["lee", "b", "b"],
-    ])
-    def test_basic_3x3x(self, A, B, C):
-        filedata = u"""A,B,C
-1,4,7
-2,5,8
-3,6,9"""
+    def test_basic_strange1(self):
+        filedata = """A,B,C
+"\\\"","",7
+"\\\\","X",8
+"\n","\\\\\\"",9"""
         with generate_tempfile(filedata) as fn:
-            expected = {"A": [1,2,3], "B": [4,5,6], "C": [7,8,9]}
+            expected = {"A": ["\"","\\","\n"], "B": ["","X","\\\""], "C": [7,8,9]}
             print(fn)
-            actual = paratext.load_csv_to_pandas(fn)
+            actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=True, out_encoding="utf-8")
             assert_dictframe_almost_equal(actual, expected)
 
     def test_basic_3x2x(self):
@@ -200,3 +147,52 @@ class TestBasicFiles(unittest.TestCase):
             assert_dictframe_almost_equal(actual, expected)
 
 
+
+class TestHellFiles(unittest.TestCase):
+
+    @parameterized.expand([
+        ["hell rows=1 cols=1 num_threads=1", 1, 1, 1],
+        ["hell rows=1 cols=2 num_threads=1", 1, 2, 1],
+        ["hell rows=1 cols=3 num_threads=1", 1, 3, 1],
+        ["hell rows=1 cols=10 num_threads=1", 1, 10, 1],
+        ["hell rows=2 cols=1 num_threads=1", 2, 1, 1],
+        ["hell rows=2 cols=2 num_threads=1", 2, 2, 1],
+        ["hell rows=2 cols=3 num_threads=1", 2, 3, 1],
+        ["hell rows=2 cols=10 num_threads=1", 2, 10, 1],
+        ["hell rows=3 cols=1 num_threads=1", 3, 1, 1],
+        ["hell rows=3 cols=2 num_threads=1", 3, 2, 1],
+        ["hell rows=3 cols=3 num_threads=1", 3, 3, 1],
+        ["hell rows=3 cols=5 num_threads=1", 3, 5, 1],
+        ["hell rows=3 cols=10 num_threads=1", 3, 10, 1],
+        ["hell rows=4 cols=1 num_threads=1", 4, 1, 1],
+        ["hell rows=4 cols=2 num_threads=1", 4, 2, 1],
+        ["hell rows=4 cols=3 num_threads=1", 4, 3, 1],
+        ["hell rows=4 cols=5 num_threads=1", 4, 5, 1],
+        ["hell rows=4 cols=10 num_threads=1", 4, 10, 1],
+        ["hell rows=10 cols=1 num_threads=1", 10, 1, 1],
+        ["hell rows=10 cols=2 num_threads=1", 10, 2, 1],
+        ["hell rows=10 cols=3 num_threads=1", 10, 3, 1],
+        ["hell rows=10 cols=5 num_threads=1", 10, 5, 1],
+        ["hell rows=10 cols=10 num_threads=1", 10, 10, 1],
+        ["hell rows=100 cols=1 num_threads=1", 100, 1, 1],
+        ["hell rows=100 cols=2 num_threads=1", 100, 2, 1],
+        ["hell rows=100 cols=3 num_threads=1", 100, 3, 1],
+        ["hell rows=100 cols=5 num_threads=1", 100, 5, 1],
+        ["hell rows=100 cols=10 num_threads=1", 100, 10, 1],
+        ["hell rows=1000 cols=1 num_threads=1", 1000, 1, 1],
+        ["hell rows=1000 cols=2 num_threads=1", 1000, 2, 1],
+        ["hell rows=1000 cols=3 num_threads=1", 1000, 3, 1],
+        ["hell rows=1000 cols=5 num_threads=1", 1000, 5, 1],
+        ["hell rows=1000 cols=10 num_threads=1", 1000, 10, 1],
+        ["hell rows=3000 cols=1 num_threads=1", 3000, 1, 1],
+        ["hell rows=3000 cols=2 num_threads=1", 3000, 2, 1],
+        ["hell rows=3000 cols=3 num_threads=1", 3000, 3, 1],
+        ["hell rows=3000 cols=5 num_threads=1", 3000, 5, 1],
+        ["hell rows=3000 cols=10 num_threads=1", 3000, 10, 1],
+    ])
+    def test_hell_frame(self, name, rows, cols, num_threads):
+        expected = paratext.testing.generate_hell_frame(rows, cols)
+        with generate_tempfilename() as fn:
+            paratext.testing.save_frame(fn, expected)
+            actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=True, out_encoding='utf-8')
+            assert_dictframe_almost_equal(actual, expected)

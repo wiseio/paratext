@@ -18,6 +18,7 @@
 */
 
 #include "paratext_internal.hpp"
+#include "util/strings.hpp"
 
 #include <string>
 #include <type_traits>
@@ -26,4 +27,17 @@
 
 size_t get_num_cores() {
   return std::thread::hardware_concurrency();
+}
+
+std::string as_quoted_string(const std::string &s, bool do_not_escape_newlines) {
+  return get_quoted_string(s.begin(), s.end(), true, do_not_escape_newlines);
+}
+
+std::string get_random_string(size_t length, size_t min_char, size_t max_char) {
+  std::string s(length, ' ');
+  size_t range = (max_char - min_char) + 1;
+  for (size_t i = 0; i < length; i++) {
+    s[i] = random() % range + min_char;
+  }
+  return s;
 }

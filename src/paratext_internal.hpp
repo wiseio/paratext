@@ -25,4 +25,8 @@
 
 size_t get_num_cores();
 
+std::string as_quoted_string(const std::string &s, bool do_not_escape_newlines = false);
+
+std::string get_random_string(size_t length, size_t min_char, size_t max_char);
+
 #endif

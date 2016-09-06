@@ -149,6 +149,12 @@ public:
             for (; i < nread; i++) {
               if (escape_jump_ > 0) {
                 escape_jump_--;
+                if (buf[i] == 'x') {
+                  escape_jump_ += 2;
+                }
+                else if (buf[i] == 'u') {
+                  escape_jump_ += 4;
+                }
                 token_.push_back(buf[i]);
               }
               else if (buf[i] == '\\') {

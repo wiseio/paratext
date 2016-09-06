@@ -151,14 +151,7 @@ namespace CSV {
               else if (buf[i] == '\"' || buf[i] == '\'') {
                 quote_started = buf[i];
                 i++;
-                for (; i < nread; i++) {
-                  if (buf[i] == quote_started) {
-                    quote_started = 0;
-                    i++;
-                    break;
-                  }
-                  token.push_back(buf[i]);
-                }
+                break;
               }
               else if (buf[i] == ',') {
                 add_column_name(token);
@@ -176,9 +169,9 @@ namespace CSV {
                 token.push_back(buf[i]);
               }
             }
-            current += nread;
           }
         }
+        current += nread;
       }
       std::unordered_set<std::string> cnset;
       for (auto &cname : column_names_) {
