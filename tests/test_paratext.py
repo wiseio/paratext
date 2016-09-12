@@ -5,8 +5,6 @@ from paratext.testing import assert_dictframe_almost_equal, generate_tempfile, g
 import pandas.util.testing
 import numpy as np
 
-from nose_parameterized import parameterized
-
 class TestBasicFiles:
 
     def do_basic_nums(self, dtype, num_rows, num_columns, num_threads):
