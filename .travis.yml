@@ -12,6 +12,7 @@ before_install:
   - pwd
   - uname -a
   - python -V
+  - g++ --version
 
 # command to install dependencies
 install:
