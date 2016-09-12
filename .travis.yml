@@ -63,6 +63,8 @@ install:
   - source activate test-environment
   - cd python
   - python setup.py build install
+  - cd ..
+  - pwd
 
 # command to run tests
-script: nosetests tests/test_paratext.py
+script: nosetests -xvs tests/test_paratext.py
