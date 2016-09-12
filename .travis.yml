@@ -4,15 +4,15 @@ python:
   - "3.4"
 
 compiler:
-   - g++
-   - clang++
-#  - gcc-4.7
-#  - gcc-4.9
-#  - clang-3.7
-#  - clang-3.8
-#  - clang-nightly
-#  - gcc-5.3
-#  - gcc-nightly
+  - g++
+  - clang++
+  - gcc-4.7
+  - gcc-4.9
+  - clang-3.7
+  - clang-3.8
+  - clang-nightly
+  - gcc-5.3
+  - gcc-nightly
 
 before_install:
   - echo "before_install"
@@ -25,7 +25,7 @@ before_install:
   - python -V
   - which g++
   - g++ --version
-  - ls $(dirname $(which g++))/g++*
+  - export ""
   # g++4.8.1
   - if [ "$CXX" == "g++" ]; then sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; fi
   # clang 3.4
@@ -34,10 +34,11 @@ before_install:
 
 # command to install dependencies
 install:
+  - export CXX=g++
   # g++4.8.1
   - if [ "$CXX" = "g++" ]; then sudo apt-get install -qq g++-4.8; fi
   - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
-
+  - ls $(dirname $(which g++))/g++*
   # clang 3.4
   - if [ "$CXX" == "clang++" ]; then sudo apt-get install --allow-unauthenticated -qq clang-3.4; fi
   - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.4"; fi
