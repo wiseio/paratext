@@ -25,7 +25,7 @@ before_install:
   - python -V
   - which g++
   - g++ --version
-  - export ""
+  - export CXX="g++"
   # g++4.8.1
   - if [ "$CXX" == "g++" ]; then sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test; fi
   # clang 3.4
