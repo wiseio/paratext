@@ -24,6 +24,9 @@
 #include <type_traits>
 #include <iostream>
 #include <thread>
+#include <chrono>
+//#include <locale>
+//#include <codecvt>
 
 size_t get_num_cores() {
   return std::thread::hardware_concurrency();
@@ -33,11 +36,47 @@ std::string as_quoted_string(const std::string &s, bool do_not_escape_newlines) 
   return get_quoted_string(s.begin(), s.end(), true, do_not_escape_newlines);
 }
 
-std::string get_random_string(size_t length, size_t min_char, size_t max_char) {
-  std::string s(length, ' ');
-  size_t range = (max_char - min_char) + 1;
-  for (size_t i = 0; i < length; i++) {
-    s[i] = random() % range + min_char;
+ParaText::as_raw_bytes get_random_string(size_t length, long seed, long min, long max) {
+  std::string output;
+  if (seed == 0) {
+    seed = std::chrono::system_clock::now().time_since_epoch().count();
   }
-  return s;
+  std::default_random_engine e1(seed);
+  std::uniform_int_distribution<int> byte_range(min, max);
+  for (size_t i = 0; i < length; i++) {
+    output.push_back(byte_range(e1));
+  }
+  ParaText::as_raw_bytes retval;
+  retval.val = output;
+  return retval;
+}
+
+ParaText::as_utf8 get_random_string_utf8(size_t num_sequences, long seed, bool include_null) {
+  std::string output;
+  if (seed == 0) {
+    seed = std::chrono::system_clock::now().time_since_epoch().count();
+  }
+  std::default_random_engine e1(seed);
+  unsigned long surrogate_range = 2048;
+  std::uniform_int_distribution<unsigned long> codepoint_range(include_null ? 0 : 1, 0x10FFFF - surrogate_range);
+  std::vector<unsigned long> seq;
+  for (size_t i = 0; i < num_sequences; i++) {
+    unsigned long val = codepoint_range(e1);
+    if (val >= 0xD800) {
+      val += surrogate_range;
+    }
+    seq.push_back(val);
+  }
+  WiseIO::convert_utf32_to_utf8(seq.begin(), seq.end(), std::back_inserter(output));
+  ParaText::as_utf8 retval;
+  retval.val = output;
+  return retval;
+}
+
+bool are_strings_equal(const std::string &x, const std::string &y) {
+  return x == y;
+}
+
+size_t get_string_length(const std::string &s) {
+  return s.size();
 }

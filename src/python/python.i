@@ -96,7 +96,66 @@
   $result = (PyObject*)::build_populator<ParaText::CSV::StringVectorPopulator>($1);
 }
 
+/*
+%typemap(in) const std::string & {
+  std::string result(ParaText::get_as_string($input, 0));
+  $1 = &result;
+}
+
+%typemap(in) std::string & {
+  std::string result(ParaText::get_as_string($input, 0));
+  $1 = &result;
+}
+*/
+
+%typemap(in) const std::string & {
+  std::unique_ptr<std::string> result(new std::string(ParaText::get_as_string($input, 0)));
+  $1 = result.release();
+}
+
+%typemap(in) std::string & {
+  std::unique_ptr<std::string> result(new std::string(ParaText::get_as_string($input, 0)));
+  $1 = result.release();
+}
+
+%typemap(freearg) const std::string & {
+  delete $1;
+}
+
+%typemap(freearg) std::string & {
+  delete $1;
+}
+
+
+%typemap(out) const std::string & {
+  AsPythonString<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNICODE_UTF8> helper;
+  $result = helper(*$1);
+}
+
+%typemap(out) std::string & {
+  AsPythonString<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNICODE_UTF8> helper;
+  $result = helper($1);
+}
+
+%typemap(out) std::string {
+  AsPythonString<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNICODE_UTF8> helper;
+  $result = helper($1);
+}
+
+%typemap(out) ParaText::as_raw_bytes {
+  AsPythonString<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNKNOWN_BYTES> helper;
+  $result = helper($1.val);
+}
+
+%typemap(out) ParaText::as_utf8 {
+  AsPythonString<ParaText::Encoding::UNKNOWN_BYTES, ParaText::Encoding::UNICODE_UTF8> helper;
+  $result = helper($1.val);
+}
+
+
+
 %{
 #include "python/numpy_helper.hpp"
+#include "python/python_input.hpp"
 %}
 

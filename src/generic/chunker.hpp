@@ -220,7 +220,7 @@ namespace ParaText {
       size_t next_wid = 1;
       quotes_so_far += workers[cur_wid]->get_num_quotes();
       while (cur_wid < workers.size()) {
-        if (end_of_chunk_[cur_wid] == start_of_chunk_[cur_wid]) {
+        if (end_of_chunk_[cur_wid] < -1 || start_of_chunk_[cur_wid] < -1) {
           start_of_chunk_[cur_wid] = -1;
           end_of_chunk_[cur_wid] = -1;
           cur_wid++;

@@ -7,84 +7,10 @@ import numpy as np
 
 from nose_parameterized import parameterized
 
-class TestBasicFiles(unittest.TestCase):
+class TestBasicFiles:
 
-    @parameterized.expand([
-        ["1x0 uint8", 1, 0, np.uint8],
-        ["0x1 uint8", 0, 1, np.uint8],
-        ["1x1 uint8", 1, 1, np.uint8],
-        ["2x1 uint8", 2, 1, np.uint8],
-        ["3x1 uint8", 3, 1, np.uint8],
-        ["4x1 uint8", 4, 1, np.uint8],
-        ["5x1 uint8", 5, 1, np.uint8],
-        ["6x1 uint8", 6, 1, np.uint8],
-        ["0x2 uint8", 0, 2, np.uint8],
-        ["1x2 uint8", 1, 2, np.uint8],
-        ["2x2 uint8", 2, 2, np.uint8],
-        ["3x2 uint8", 3, 2, np.uint8],
-        ["4x2 uint8", 4, 2, np.uint8],
-        ["5x2 uint8", 5, 2, np.uint8],
-        ["6x2 uint8", 6, 2, np.uint8],
-        ["0x3 uint8", 0, 3, np.uint8],
-        ["1x3 uint8", 1, 3, np.uint8],
-        ["2x3 uint8", 2, 3, np.uint8],
-        ["3x3 uint8", 3, 3, np.uint8],
-        ["4x3 uint8", 4, 3, np.uint8],
-        ["5x3 uint8", 5, 3, np.uint8],
-        ["6x3 uint8", 6, 3, np.uint8],
-        ["0x4 uint8", 0, 4, np.uint8],
-        ["1x4 uint8", 1, 4, np.uint8],
-        ["2x4 uint8", 2, 4, np.uint8],
-        ["3x4 uint8", 3, 4, np.uint8],
-        ["4x4 uint8", 4, 4, np.uint8],
-        ["5x4 uint8", 5, 4, np.uint8],
-        ["6x4 uint8", 6, 4, np.uint8],
-        ["0x5 float",0, 5, np.uint8],
-        ["1x5 float",1, 5, np.uint8],
-        ["2x5 float",2, 5, np.uint8],
-        ["3x5 float",3, 5, np.uint8],
-        ["4x5 float",4, 5, np.uint8],
-        ["5x5 float",5, 5, np.uint8],
-        ["6x5 float",6, 5, np.uint8],
-        ["1x0 float",1, 0, np.float_],
-        ["0x1 float",0, 1, np.float_],
-        ["1x1 float",1, 1, np.float_],
-        ["2x1 float",2, 1, np.float_],
-        ["3x1 float",3, 1, np.float_],
-        ["4x1 float",4, 1, np.float_],
-        ["5x1 float",5, 1, np.float_],
-        ["6x1 float",6, 1, np.float_],
-        ["0x2 float",0, 2, np.float_],
-        ["1x2 float",1, 2, np.float_],
-        ["2x2 float",2, 2, np.float_],
-        ["3x2 float",3, 2, np.float_],
-        ["4x2 float",4, 2, np.float_],
-        ["5x2 float",5, 2, np.float_],
-        ["6x2 float",6, 2, np.float_],
-        ["0x3 float",0, 3, np.float_],
-        ["1x3 float",1, 3, np.float_],
-        ["2x3 float",2, 3, np.float_],
-        ["3x3 float",3, 3, np.float_],
-        ["4x3 float",4, 3, np.float_],
-        ["5x3 float",5, 3, np.float_],
-        ["6x3 float",6, 3, np.float_],
-        ["0x4 float",0, 4, np.float_],
-        ["1x4 float",1, 4, np.float_],
-        ["2x4 float",2, 4, np.float_],
-        ["3x4 float",3, 4, np.float_],
-        ["4x4 float",4, 4, np.float_],
-        ["5x4 float",5, 4, np.float_],
-        ["6x4 float",6, 4, np.float_],
-        ["0x5 float",0, 5, np.float_],
-        ["1x5 float",1, 5, np.float_],
-        ["2x5 float",2, 5, np.float_],
-        ["3x5 float",3, 5, np.float_],
-        ["4x5 float",4, 5, np.float_],
-        ["5x5 float",5, 5, np.float_],
-        ["6x5 float",6, 5, np.float_],
-    ])
-    def test_basic_ints(self, name, num_rows, num_columns, dtype):
-        keys = ["A", "B", "C", "D", "E", "F"]
+    def do_basic_nums(self, dtype, num_rows, num_columns, num_threads):
+        keys = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
         keys = keys[0:num_columns]
         filedata = ','.join(keys[0:num_columns]) + "\n"
         expected = {}
@@ -100,9 +26,15 @@ class TestBasicFiles(unittest.TestCase):
                 expected[keys[k]].append(row_data[k])
         with generate_tempfile(filedata) as fn:
             print(fn)
-            actual = paratext.load_csv_to_pandas(fn)
+            actual = paratext.load_csv_to_pandas(fn, num_threads=num_threads)
             assert_dictframe_almost_equal(actual, expected)
 
+    def test_basic_ints(self):
+        for dtype in [np.float_, np.uint8]:
+            for num_rows in [0, 1, 2, 3, 4, 5, 6, 10, 100, 1000]:
+                for num_cols in [1, 2, 3, 4, 5, 6, 10]:
+                    for num_threads in [0, 1, 2, 3, 4, 5, 6, 7, 8, 15, 20]:
+                        yield self.do_basic_nums, dtype, num_rows, num_cols, num_threads
 
     def test_basic_strange1(self):
         filedata = """A,B,C
@@ -146,53 +78,47 @@ class TestBasicFiles(unittest.TestCase):
             actual = paratext.load_csv_to_pandas(fn)
             assert_dictframe_almost_equal(actual, expected)
 
+class TestMixedFiles:
 
-
-class TestHellFiles(unittest.TestCase):
-
-    @parameterized.expand([
-        ["hell rows=1 cols=1 num_threads=1", 1, 1, 1],
-        ["hell rows=1 cols=2 num_threads=1", 1, 2, 1],
-        ["hell rows=1 cols=3 num_threads=1", 1, 3, 1],
-        ["hell rows=1 cols=10 num_threads=1", 1, 10, 1],
-        ["hell rows=2 cols=1 num_threads=1", 2, 1, 1],
-        ["hell rows=2 cols=2 num_threads=1", 2, 2, 1],
-        ["hell rows=2 cols=3 num_threads=1", 2, 3, 1],
-        ["hell rows=2 cols=10 num_threads=1", 2, 10, 1],
-        ["hell rows=3 cols=1 num_threads=1", 3, 1, 1],
-        ["hell rows=3 cols=2 num_threads=1", 3, 2, 1],
-        ["hell rows=3 cols=3 num_threads=1", 3, 3, 1],
-        ["hell rows=3 cols=5 num_threads=1", 3, 5, 1],
-        ["hell rows=3 cols=10 num_threads=1", 3, 10, 1],
-        ["hell rows=4 cols=1 num_threads=1", 4, 1, 1],
-        ["hell rows=4 cols=2 num_threads=1", 4, 2, 1],
-        ["hell rows=4 cols=3 num_threads=1", 4, 3, 1],
-        ["hell rows=4 cols=5 num_threads=1", 4, 5, 1],
-        ["hell rows=4 cols=10 num_threads=1", 4, 10, 1],
-        ["hell rows=10 cols=1 num_threads=1", 10, 1, 1],
-        ["hell rows=10 cols=2 num_threads=1", 10, 2, 1],
-        ["hell rows=10 cols=3 num_threads=1", 10, 3, 1],
-        ["hell rows=10 cols=5 num_threads=1", 10, 5, 1],
-        ["hell rows=10 cols=10 num_threads=1", 10, 10, 1],
-        ["hell rows=100 cols=1 num_threads=1", 100, 1, 1],
-        ["hell rows=100 cols=2 num_threads=1", 100, 2, 1],
-        ["hell rows=100 cols=3 num_threads=1", 100, 3, 1],
-        ["hell rows=100 cols=5 num_threads=1", 100, 5, 1],
-        ["hell rows=100 cols=10 num_threads=1", 100, 10, 1],
-        ["hell rows=1000 cols=1 num_threads=1", 1000, 1, 1],
-        ["hell rows=1000 cols=2 num_threads=1", 1000, 2, 1],
-        ["hell rows=1000 cols=3 num_threads=1", 1000, 3, 1],
-        ["hell rows=1000 cols=5 num_threads=1", 1000, 5, 1],
-        ["hell rows=1000 cols=10 num_threads=1", 1000, 10, 1],
-        ["hell rows=3000 cols=1 num_threads=1", 3000, 1, 1],
-        ["hell rows=3000 cols=2 num_threads=1", 3000, 2, 1],
-        ["hell rows=3000 cols=3 num_threads=1", 3000, 3, 1],
-        ["hell rows=3000 cols=5 num_threads=1", 3000, 5, 1],
-        ["hell rows=3000 cols=10 num_threads=1", 3000, 10, 1],
-    ])
-    def test_hell_frame(self, name, rows, cols, num_threads):
-        expected = paratext.testing.generate_hell_frame(rows, cols)
+    def run_case(self, num_rows, num_cats, num_floats, num_ints, num_threads):
+        expected, types_df = paratext.testing.generate_mixed_frame(num_rows, num_floats, num_cats, num_ints)
         with generate_tempfilename() as fn:
             paratext.testing.save_frame(fn, expected)
-            actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=True, out_encoding='utf-8')
+            actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=True, out_encoding='utf-8', num_threads=num_threads)
             assert_dictframe_almost_equal(actual, expected)
+
+    def test_mixed_frame(self):
+        #assert_dictframe_almost_equal({}, {"hi":[1,2]})
+        for num_rows in [1, 2, 3, 5, 10, 100, 1000]:
+            for num_cats in [1, 3, 5]:
+                for num_floats in [1, 3, 5]:
+                    for num_ints in [50]:
+                        for num_threads in [1,2,3,5,10,20]:
+                            yield self.run_case, num_rows, num_cats, num_floats, num_ints, num_threads
+
+class TestHellFiles:
+
+    def do_hell_frame(self, frame_encoding, out_encoding, include_null, allow_quoted_newlines, rows, cols, num_threads):
+        print(num_threads)
+        expected = paratext.testing.generate_hell_frame(rows, cols, include_null=include_null, fmt=frame_encoding)
+        with generate_tempfilename() as fn:
+            print(fn)
+            paratext.testing.save_frame(fn, expected, allow_quoted_newlines, out_format=out_encoding)
+            actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=allow_quoted_newlines, out_encoding=out_encoding, num_threads=num_threads, convert_null_to_space=not include_null)
+            assert_dictframe_almost_equal(actual, expected)
+
+    def test_hell_frame(self):
+        formatting = [("utf-8", "utf-8"),
+                      ("printable_ascii", "utf-8"),
+                      ("utf-8", "unknown"),
+                      ("arbitrary", "unknown"),
+                      ("arbitrary", "utf-8"),
+                      ("mixed", "unknown"),
+                      ("mixed", "utf-8")]
+        for (frame_encoding, out_encoding) in formatting:
+            for include_null in [False, True]:
+                for allow_quoted_newlines in [False, True]:
+                    for num_rows in [1,2,3,4,10,100,1000,3000]:
+                        for num_cols in [1,2,3,4,5,10,20,30]:
+                            for num_threads in [1]:#[1,2,3,4,5,10,20,30]:
+                                yield self.do_hell_frame, frame_encoding, out_encoding, include_null, allow_quoted_newlines, num_rows, num_cols, num_threads

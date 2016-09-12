@@ -31,6 +31,9 @@
 #include <string>
 #include <memory>
 #include <sstream>
+#include <limits>
+#include <random>
+#include "unicode.hpp"
 
   template <class T>
   struct content_hash {};
@@ -344,6 +347,9 @@
 	      break;
 	    case 'v':
 	      *(out++) = '\v';
+	      break;
+	    case 'e':
+	      *(out++) = '\\';
 	      break;
 	    case 'x':
 	      {

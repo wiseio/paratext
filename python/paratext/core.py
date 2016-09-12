@@ -89,10 +89,16 @@ _csv_load_params_doc = """
         The encoding of the data read from the file. (default=None)
 
     out_encoding : str
-        The encoding of the strings returned.
+        The encoding of the strings returned. If set to 'utf-8', the
+        parsed data will be converted to UTF-8 unicode object (Python 2.7)
+        or str object (Python 3+). Otherwise a str object (Python 2.7)
+        or bytes object (Python 3+) is returned. (default=None)
+
+    convert_null_to_space : bool
+        Whether to convert null terminator characters to spaces. (default=False)
 """
 
-def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None):
+def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, convert_null_to_space=True):
     params = pti.ParseParams()
     params.allow_quoted_newlines = allow_quoted_newlines
     if num_threads > 0:
@@ -101,6 +107,7 @@ def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, nu
         params.num_threads = int(max(pti.get_num_cores(), 4))
     params.number_only = number_only
     params.no_header = no_header
+    params.convert_null_to_space = convert_null_to_space
     if max_levels is not None:
         params.max_levels = max_levels;
     if max_level_name_length is not None:
@@ -119,7 +126,7 @@ def _make_posix_filename(fn_or_uri):
      return result
 
 @_docstring_parameter(_csv_load_params_doc)
-def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None, in_encoding=None, out_encoding=None):
+def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None, in_encoding=None, out_encoding=None, convert_null_to_space=True):
     """
     Creates a ParaText internal C++ CSV reader object and reads the CSV
     file in parallel. This function ordinarily should not be called directly.
@@ -144,6 +151,7 @@ def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=Fa
         params.num_threads = int(max(pti.get_num_cores(), 4))
     params.number_only = number_only
     params.no_header = no_header
+    params.convert_null_to_space = convert_null_to_space
     if max_levels is not None:
         params.max_levels = max_levels;
     if max_level_name_length is not None:

@@ -86,6 +86,7 @@ public:
     size_t current = begin;
     size_t spos_line = begin, epos_line = begin;
     const size_t block_size = params.block_size;
+    convert_null_to_space_ = params.convert_null_to_space;
     char buf[block_size];
     in.seekg(current, std::ios_base::beg);
     definitely_string_ = false;
@@ -264,7 +265,9 @@ public:
     }
     if (definitely_string_) {
       parse_unquoted_string(token_.begin(), token_.end(), std::back_inserter(token_aux_));
-      convert_null_to_space(token_aux_.begin(), token_aux_.end());
+      if (convert_null_to_space_) {
+        convert_null_to_space(token_aux_.begin(), token_aux_.end());
+      }
       handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
       token_aux_.clear();
       definitely_string_ = false;
@@ -353,7 +356,9 @@ public:
       }
       else {
         parse_unquoted_string(token_.begin(), token_.end(), std::back_inserter(token_aux_));
-        convert_null_to_space(token_aux_.begin(), token_aux_.end());
+        if (convert_null_to_space_) {
+          convert_null_to_space(token_aux_.begin(), token_aux_.end());
+        }
         handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
         token_aux_.clear();
       }
@@ -386,6 +391,7 @@ private:
   char                                         quote_started_;
   size_t                                       column_index_;
   size_t                                       escape_jump_;
+  bool                                         convert_null_to_space_;
   std::exception_ptr                           thread_exception_;
 };
 }

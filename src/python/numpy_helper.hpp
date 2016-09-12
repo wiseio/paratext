@@ -69,7 +69,12 @@ template <>
 struct AsPythonString<ParaText::Encoding::UNKNOWN_BYTES,
                       ParaText::Encoding::UNICODE_UTF8> {
   PyObject *operator()(const std::string &in) const {
-    return PyUnicode_FromStringAndSize(in.c_str(), in.size());
+    PyObject *attempt = PyUnicode_FromStringAndSize(in.c_str(), in.size());
+    if (attempt == NULL) {
+       PyErr_Clear();
+       attempt = PyBytes_FromStringAndSize(in.c_str(), in.size());
+    }
+    return attempt;
   }
 };
 
@@ -101,7 +106,12 @@ template <>
 struct AsPythonString<ParaText::Encoding::UNICODE_UTF8,
                       ParaText::Encoding::UNICODE_UTF8> {
   PyObject *operator()(const std::string &in) const {
-    return PyUnicode_FromStringAndSize(in.c_str(), in.size());
+    PyObject *attempt = PyUnicode_FromStringAndSize(in.c_str(), in.size());
+    if (attempt == NULL) {
+       PyErr_Clear();
+       attempt = PyBytes_FromStringAndSize(in.c_str(), in.size());
+    }
+    return attempt;
   }
 };
 
