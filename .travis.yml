@@ -12,7 +12,9 @@ before_install:
   - pwd
   - uname -a
   - python -V
+  - which g++
   - g++ --version
+  - ls $(dirname $(which g++))/g++*
 
 compiler:
   - gcc-4.7
