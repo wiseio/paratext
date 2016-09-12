@@ -14,6 +14,15 @@ before_install:
   - python -V
   - g++ --version
 
+compiler:
+  - gcc-4.7
+  - gcc-4.9
+#  - clang-3.7
+#  - clang-3.8
+#  - clang-nightly
+#  - gcc-5.3
+#  - gcc-nightly
+
 # command to install dependencies
 install:
   - echo "install"
