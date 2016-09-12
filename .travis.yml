@@ -35,7 +35,7 @@ install:
   # Useful for debugging any issues with conda
   - conda info -a
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION swig=3.0.8
+  - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION swig=3.0.8 pandas numpy
   - source activate test-environment
   - cd python
   - python setup.py build install
