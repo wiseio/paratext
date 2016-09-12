@@ -66,5 +66,11 @@ install:
   - cd ..
   - pwd
 
+before-script:
+  - export PY_PREFIX=$(python -c "import sys; print(sys.prefix)")
+  - echo $PY_PREFIX
+  - export PY_SP_DIR=$PY_PREFIX/lib/python$TRAVIS_PYTHON_VERSION/site-packages
+  - echo $PY_SP_DIR
+
 # command to run tests
 script: nosetests -xvs tests/test_paratext.py
