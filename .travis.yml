@@ -40,7 +40,8 @@ install:
   # Replace dep1 dep2 ... with your dependencies
   - conda create -q -n test-environment python=$TRAVIS_PYTHON_VERSION swig=3.0.8
   - source activate test-environment
-  - python setup.py install
+  - cd python
+  - python setup.py build install
 
 # command to run tests
 script: nosetests tests/test_paratext.py
