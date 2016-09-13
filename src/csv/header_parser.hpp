@@ -111,6 +111,7 @@ namespace CSV {
       char buf[block_size];
       char quote_started = 0;
       bool eoh_encountered = false;
+      bool soh_encountered = false;
       in_.seekg(0, std::ios_base::beg);
       while (current < length_ && !eoh_encountered) {
         if (current % block_size == 0) { /* The block is aligned. */
@@ -121,6 +122,15 @@ namespace CSV {
         }
         size_t nread = in_.gcount();
         size_t i = 0;
+        /* ignore leading whitespace in the file. */
+        for (; i < nread && !soh_encountered;) {
+          if (isspace(buf[i])) {
+            i++; /* eat the whitespace. */
+          } else {
+            soh_encountered = true;
+            /* do not do i++. we need to process it like non-whitespace */
+          }
+        }
         while (i < nread && !eoh_encountered) {
           if (quote_started) {
             for (; i < nread; i++) {
