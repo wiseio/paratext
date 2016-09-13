@@ -123,7 +123,7 @@ namespace CSV {
         size_t nread = in_.gcount();
         size_t i = 0;
         /* ignore leading whitespace in the file. */
-        for (; i < nread && !soh_encountered;) {
+        while (i < nread && !soh_encountered) {
           if (isspace(buf[i])) {
             i++; /* eat the whitespace. */
           } else {
@@ -166,7 +166,8 @@ namespace CSV {
               else if (buf[i] == ',') {
                 add_column_name(token);
                 token.clear();
-              }
+              }              
+              else if (buf[i] == '\r') { /* do nothing: dos wastes a byte each line. */ }
               else if (buf[i] == '\n') {
                 add_column_name(token);
                 token.clear();
@@ -182,6 +183,9 @@ namespace CSV {
           }
         }
         current += nread;
+      }
+      if (!soh_encountered) { /* If this is just a file of whitespace, then the end of header is the last pos in the file. */
+        end_of_header_ = current;
       }
       std::unordered_set<std::string> cnset;
       for (auto &cname : column_names_) {

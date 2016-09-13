@@ -30,24 +30,19 @@ class TestBasicFiles:
 
     def do_basic_empty(self, file_body, num_threads):
         with generate_tempfile(file_body) as fn:
+            logging.debug("filename: %s" % fn)
             actual = paratext.load_csv_to_pandas(fn, num_threads=num_threads)
             expected = pandas.DataFrame()
             assert_dictframe_almost_equal(actual, expected)
 
     def test_basic_empty(self):
-        """
-        Tests empty files
-        """
-        file_bodies = ["", "\n", "\n\n", " ", " \n"]
+        file_bodies = ["", "\n", "\n\n", " ", " \n", " \n   \n \n", "\n  \n", "\v\t \n", "\n\n\n", "\n\n\n\n"]
+        file_bodies += ["\r\n", "\r\n\r\n", " ", " \r\n", " \r\n   \r\n \r\n", "\r\n  \r\n", "\r\v\t \r\n", "\r\n\r\n\r\n", "\r\n\r\n\r\n\r\n"]
         for file_body in file_bodies:
             for num_threads in [1]:
                 yield self.do_basic_empty, file_body, num_threads
 
     def test_basic_ints(self):
-        """
-        Test very basic numeric data of different dtypes. Cover on edge
-        cases like 1x1, 1xK, Kx1, 2x2, 2xK, Kx2, etc.
-        """
         for dtype in [np.float_, np.uint8]:
             for num_rows in [0, 1, 2, 3, 4, 5, 6, 10, 100, 1000]:
                 for num_cols in [1, 2, 3, 4, 5, 6, 10]:
@@ -110,18 +105,17 @@ class TestMixedFiles:
         for num_rows in [1, 2, 3, 5, 10, 100, 1000]:
             for num_cats in [1, 3, 5]:
                 for num_floats in [1, 3, 5]:
-                    for num_ints in [50]:
-                        for num_threads in [1,2,3,5,10,20]:
+                    for num_ints in [0, 1, 5, 10, 50]:
+                        for num_threads in [1, 2, 3, 5, 10, 20]:
                             yield self.run_case, num_rows, num_cats, num_floats, num_ints, num_threads
 
 class TestHellFiles:
 
-    def do_hell_frame(self, frame_encoding, out_encoding, include_null, allow_quoted_newlines, rows, cols, num_threads):
-        print(num_threads)
+    def do_hell_frame(self, dos, frame_encoding, out_encoding, include_null, allow_quoted_newlines, rows, cols, num_threads):
         expected = paratext.testing.generate_hell_frame(rows, cols, include_null=include_null, fmt=frame_encoding)
         with generate_tempfilename() as fn:
             logging.debug("filename: %s" % fn)
-            paratext.testing.save_frame(fn, expected, allow_quoted_newlines, out_format=out_encoding)
+            paratext.testing.save_frame(fn, expected, allow_quoted_newlines, out_format=out_encoding, dos=dos)
             actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=allow_quoted_newlines, out_encoding=out_encoding, num_threads=num_threads, convert_null_to_space=not include_null)
             assert_dictframe_almost_equal(actual, expected)
 
@@ -133,10 +127,11 @@ class TestHellFiles:
                       ("arbitrary", "utf-8"),
                       ("mixed", "unknown"),
                       ("mixed", "utf-8")]
-        for (frame_encoding, out_encoding) in formatting:
-            for include_null in [False, True]:
-                for allow_quoted_newlines in [False, True]:
-                    for num_rows in [1,2,3,4,10,100,1000,3000]:
-                        for num_cols in [1,2,3,4,5,10,20,30]:
-                            for num_threads in [1,2,3,4,5,8,10,20,30]:
-                                yield self.do_hell_frame, frame_encoding, out_encoding, include_null, allow_quoted_newlines, num_rows, num_cols, num_threads
+        for dos in [False, True]:
+            for (frame_encoding, out_encoding) in formatting:
+                for include_null in [False, True]:
+                    for allow_quoted_newlines in [False, True]:
+                        for num_rows in [1,2,3,4,10,100,1000,3000]:
+                            for num_cols in [1,2,3,4,5,10,20,30]:
+                                for num_threads in [1,2,3,4,5,8,10,20,30]:
+                                    yield self.do_hell_frame, dos, frame_encoding, out_encoding, include_null, allow_quoted_newlines, num_rows, num_cols, num_threads

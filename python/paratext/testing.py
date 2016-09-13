@@ -77,12 +77,12 @@ def generate_hell_frame(num_rows, num_columns, include_null=False, fmt='arbitrar
         frame[key] = data
     return pandas.DataFrame(frame)
 
-def save_frame(filename, frame, allow_quoted_newlines=True, out_format='arbitrary'):
+def save_frame(filename, frame, allow_quoted_newlines=True, out_format='arbitrary', dos=False):
     f = open(filename, 'wb')
-    write_frame(f, frame, allow_quoted_newlines, out_format=out_format)
+    write_frame(f, frame, allow_quoted_newlines, out_format=out_format, dos=dos)
     f.close()
 
-def write_frame(stream, frame, allow_quoted_newlines=True, out_format='arbitrary'):
+def write_frame(stream, frame, allow_quoted_newlines=True, out_format='arbitrary', dos=False):
     # In case .keys() is non-deterministic
     keys = list(frame.keys())
     cols = []
@@ -127,7 +127,10 @@ def write_frame(stream, frame, allow_quoted_newlines=True, out_format='arbitrary
             cols.append(frame[key].values)
         else:
             cols.append(np.asarray(frame[key]))
-    stream.write(b"\n")
+    if dos:
+        stream.write(b"\r\n")
+    else:
+        stream.write(b"\n")
     if hasattr(frame, "shape"):
         num_rows = frame.shape[0]
     elif len(keys) == 0:
@@ -152,12 +155,15 @@ def write_frame(stream, frame, allow_quoted_newlines=True, out_format='arbitrary
                     stream.write(sval)
             else:
                 stream.write(bytes(_repr_bytes(val)))
-        stream.write(b"\n")
+        if dos:
+            stream.write(b"\r\n")
+        else:
+            stream.write(b"\n")
 
 @contextmanager
 def generate_tempfile(filedata):
-    f = NamedTemporaryFile(delete=False, prefix="paratext-tests")
-    f.write(filedata.encode("utf-8"))
+    f = NamedTemporaryFile(delete=False, mode="wb", prefix="paratext-tests")
+    f.write(filedata)
     name = f.name
     f.close()
     yield f.name
@@ -237,7 +243,7 @@ def generate_mixed_frame(num_rows, num_floats, num_cats, num_ints):
     cat_ids = ["col" + str(id) for id in cat_ids]
     int_ids = ["col" + str(id) for id in int_ids]
     float_ids = ["col" + str(id) for id in float_ids]
-    d = {}
+    d = collections.OrderedDict()
     dtypes = {}
     for col in cat_ids:
         X = np.zeros((num_rows,), dtype=np.object);

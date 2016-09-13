@@ -116,6 +116,7 @@ public:
           if (buf[i] == ',') {
             process_token_number_only();
           }
+          else if (buf[i] == '\r') { /* do nothing. */}
           else if (buf[i] == '\n') {
             epos_line = current + i;
             if (epos_line - spos_line > 0) {
@@ -171,6 +172,7 @@ public:
               else if (buf[i] == ',') {
                 process_token();
               }
+              else if (buf[i] == '\r') { /* do nothing: dos wastes a byte each line. */ }
               else if (buf[i] == '\n') {
                 epos_line = current + i;
                 if (epos_line - spos_line > 0) {
