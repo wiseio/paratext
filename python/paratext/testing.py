@@ -25,11 +25,19 @@ import pandas
 import paratext_internal
 import os
 import random
+import sys
 
 from tempfile import NamedTemporaryFile
 from contextlib import contextmanager
 from six.moves import range
 import six
+
+if sys.version_info>=(3,0):
+    def _repr_bytes(o):
+        return repr(o, 'utf-8')
+else:
+    def _repr_bytes(o):
+        return repr(o)
 
 def as_quoted_string(s, do_not_escape_newlines=False):
     return paratext_internal.as_quoted_string(s, do_not_escape_newlines)
@@ -143,7 +151,7 @@ def write_frame(stream, frame, allow_quoted_newlines=True, out_format='arbitrary
                     sval = safe.to_raw_string(val)
                     stream.write(sval)
             else:
-                stream.write(bytes(repr(val), 'utf-8'))
+                stream.write(bytes(_repr_bytes(val)))
         stream.write(b"\n")
 
 @contextmanager
