@@ -34,7 +34,7 @@ import six
 
 if sys.version_info>=(3,0):
     def _repr_bytes(o):
-        return repr(o, 'utf-8')
+        return bytes(repr(o), 'utf-8')
 else:
     def _repr_bytes(o):
         return repr(o)
