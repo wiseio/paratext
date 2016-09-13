@@ -73,4 +73,4 @@ before_script:
   - echo $PYTHONPATH
 
 # command to run tests
-script: nosetests -vs --with-xunit tests/test_paratext.py
+script: nosetests -s --failure-detail --with-xunit tests/test_paratext.py

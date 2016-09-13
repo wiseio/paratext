@@ -28,6 +28,7 @@ Loads text files using multiple cores.
 
 import paratext_internal as pti
 
+import os
 import six
 from six.moves import range
 from six.moves.urllib_parse import urlparse
@@ -387,7 +388,15 @@ def load_csv_to_pandas(filename, *args, **kwargs):
         The contents of the CSV file as a Pandas DataFrame.
     """
     import pandas
-    return pandas.DataFrame.from_items(load_csv_to_expanded_columns(filename, *args, **kwargs))
+    expanded = load_csv_to_expanded_columns(filename, *args, **kwargs)
+    if os.path.getsize(filename) < 2 ** 10:  # cover the case of empty files have 0-element generators
+         expanded = list(expanded)
+         if len(expanded) > 0:
+              return pandas.DataFrame.from_items(expanded)
+         else:
+              return pandas.DataFrame()
+    else:
+         return pandas.DataFrame.from_items(expanded)
 
 @_docstring_parameter(_csv_load_params_doc)
 def baseline_average_columns(filename, type_check=False, *args, **kwargs):
@@ -456,23 +465,3 @@ def baseline_disk_to_mem(filename, *args, **kwargs):
     mc = pti.MemCopyBaseline();
     count = mc.load(_make_posix_filename(filename), params)
     return count
-
-def internal_compare(filename, *args, **kwargs):
-    """
-    Loads a Pandas DataFrame with pandas and paratext, and compares their contents.
-    """
-    import pandas
-    dfY = load_csv_to_pandas(filename, *args, **kwargs)
-    if kwargs.get("no_header"):
-        dfX = pandas.read_csv(filename, header=None, na_values=['?'], names=dfY.keys())
-    else:
-        dfX = pandas.read_csv(filename, na_values=['?'])
-    results = {}
-    for key in dfX.columns:
-        if dfX[key].dtype in (str, unicode, np.object):
-            nonnan_mask = (dfY[key] != 'nan') & (dfY[key] != '?')
-            results[key] = (dfX[key][nonnan_mask]!=dfY[key][nonnan_mask]).mean()
-        else:
-            nonnan_mask = ~np.isnan(dfX[key])
-            results[key] = abs(dfX[key][nonnan_mask]-dfY[key][nonnan_mask]).max()
-    return results

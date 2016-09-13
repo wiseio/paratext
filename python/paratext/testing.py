@@ -264,3 +264,24 @@ def generate_mixed_frame(num_rows, num_floats, num_cats, num_ints):
         d[col] = np.asarray(np.random.randint(min_int[j], max_int[j], num_rows), dtype=dtypes_int[j])
         dtypes[col] = dtypes_int[j]
     return d, dtypes
+
+
+def internal_compare(filename, *args, **kwargs):
+    """
+    Loads a Pandas DataFrame with pandas and paratext, and compares their contents.
+    """
+    import pandas
+    dfY = load_csv_to_pandas(filename, *args, **kwargs)
+    if kwargs.get("no_header"):
+        dfX = pandas.read_csv(filename, header=None, na_values=['?'], names=dfY.keys())
+    else:
+        dfX = pandas.read_csv(filename, na_values=['?'])
+    results = {}
+    for key in dfX.columns:
+        if dfX[key].dtype in (str, unicode, np.object):
+            nonnan_mask = (dfY[key] != 'nan') & (dfY[key] != '?')
+            results[key] = (dfX[key][nonnan_mask]!=dfY[key][nonnan_mask]).mean()
+        else:
+            nonnan_mask = ~np.isnan(dfX[key])
+            results[key] = abs(dfX[key][nonnan_mask]-dfY[key][nonnan_mask]).max()
+    return results
