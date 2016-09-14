@@ -56,7 +56,6 @@ public:
   }
 
   void parse_impl(const std::string &filename) {
-
     std::ifstream in;
     in.open(filename.c_str());
     const size_t block_size = 32768;

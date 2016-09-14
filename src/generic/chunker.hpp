@@ -110,6 +110,23 @@ namespace ParaText {
     }
 
   private:
+    long get_num_trailing_escapes(long start_of_chunk, long end_of_chunk) {
+      long num_trailing_escapes = 0;
+      long k = end_of_chunk;
+      for (; k >= start_of_chunk; k++) {
+        in_.clear();
+        in_.seekg(k, std::ios_base::beg);
+        char buf;
+        in_.read(&buf, 1);
+        size_t nread = in_.gcount();
+        if (nread == 0 || buf != '\\') {
+          break;
+        }
+        num_trailing_escapes++;
+      }
+      return num_trailing_escapes;
+    }
+
     void compute_offsets(bool allow_quoted_newlines = true) {
       const size_t chunk_size = std::max(2L, (long)((length_ - starting_offset_) / maximum_chunks_));
       long start_of_chunk = starting_offset_;
@@ -127,36 +144,37 @@ namespace ParaText {
           break;
         }
 #ifdef PARALOAD_DEBUG
-        std::cerr << ">>> start_of_chunk: " << start_of_chunk << " end_of_chunk: " << end_of_chunk << std::endl;
+        std::cerr << "initial>>> start_of_chunk: " << start_of_chunk << " end_of_chunk: " << end_of_chunk << std::endl;
 #endif
-        in_.clear();
-        in_.seekg(end_of_chunk - 1, std::ios_base::beg);
-        char buf[2];
-        in_.read(buf, 2);
-        size_t nread = in_.gcount();
-        if (nread == 2 && buf[0] != '\\' && buf[1] == '\\') {
-          if (end_of_chunk + 1 > lastpos_) {
-            std::ostringstream ostr;
-            ostr << "The file ends with an escape character";
-            throw std::logic_error(ostr.str());
-          }
-          end_of_chunk = end_of_chunk + 1;
-        }
         if (worker_id == maximum_chunks_ - 1) {
           end_of_chunk = lastpos_;
         }
+        long trailing_escapes = get_num_trailing_escapes(start_of_chunk, end_of_chunk);
+        if (trailing_escapes % 2 == 1) {
+          if (end_of_chunk == lastpos_) {
+            throw std::logic_error("file ends with a trailing escape");
+          }
+          else {
+            end_of_chunk++;
+          }
+        }
         start_of_chunk_.push_back(start_of_chunk);
         end_of_chunk_.push_back(end_of_chunk);
-        if (end_of_chunk == lastpos_) {
+        if (end_of_chunk >= lastpos_) {
           break;
         }
-        start_of_chunk = std::min(lastpos_, end_of_chunk + 1);
+        start_of_chunk = end_of_chunk + 1;
       }
       if (allow_quoted_newlines) {
         adjust_offsets_according_to_quoted_newlines();
       }
       else {
         adjust_offsets_according_to_unquoted_newlines();
+      }
+      for (size_t chunk_id = 0; chunk_id < start_of_chunk_.size(); chunk_id++) {
+#ifdef PARALOAD_DEBUG
+        std::cerr << "final>>> start_of_chunk: " << start_of_chunk_[chunk_id] << " end_of_chunk: " << end_of_chunk_[chunk_id] << std::endl;
+#endif
       }
     }
 
@@ -229,9 +247,12 @@ namespace ParaText {
         quotes_so_far += workers[cur_wid]->get_num_quotes();
       }
       while (cur_wid < workers.size()) {
-        if (end_of_chunk_[cur_wid] < -1 || start_of_chunk_[cur_wid] < -1) {
+        if (end_of_chunk_[cur_wid] < 0 || start_of_chunk_[cur_wid] < 0) {
           start_of_chunk_[cur_wid] = -1;
           end_of_chunk_[cur_wid] = -1;
+#ifdef PARALOAD_DEBUG
+          std::cerr << "negative chunk cur_wid=" << cur_wid << " next_wid=" << next_wid << std::endl;
+#endif
           cur_wid++;
           next_wid = cur_wid + 1;
           continue;
@@ -239,9 +260,18 @@ namespace ParaText {
         if (quotes_so_far % 2 == 0) {
           if (next_wid < workers.size()) {
             quotes_so_far += workers[next_wid]->get_num_quotes();
+#ifdef PARALOAD_DEBUG
+            std::cerr << "cur_wid=" << cur_wid << " next_wid=" << next_wid << " quotes_so_far=" << quotes_so_far << std::endl;
+#endif
             if (workers[next_wid]->get_first_unquoted_newline() >= 0) {
               end_of_chunk_[cur_wid] = workers[next_wid]->get_first_unquoted_newline();
-              start_of_chunk_[next_wid] = std::min(end_of_chunk_[next_wid], end_of_chunk_[cur_wid] + 1);
+              if (end_of_chunk_[next_wid] == workers[next_wid]->get_first_unquoted_newline()) {
+                start_of_chunk_[next_wid] = -1;
+                end_of_chunk_[next_wid] = -1;
+              }
+              else {
+                start_of_chunk_[next_wid] = workers[next_wid]->get_first_unquoted_newline() + 1;
+              }
               cur_wid = next_wid;
             }
             else {
@@ -259,9 +289,18 @@ namespace ParaText {
         else {
           if (next_wid < workers.size()) {
             quotes_so_far += workers[next_wid]->get_num_quotes();
+#ifdef PARALOAD_DEBUG
+            std::cerr << "cur_wid=" << cur_wid << " next_wid=" << next_wid << " quotes_so_far=" << quotes_so_far << std::endl;
+#endif
             if (workers[next_wid]->get_first_quoted_newline() >= 0) {
+              if (end_of_chunk_[next_wid] == workers[next_wid]->get_first_quoted_newline()) {
+                start_of_chunk_[next_wid] = -1;
+                end_of_chunk_[next_wid] = -1;
+              }
+              else {
+                start_of_chunk_[next_wid] = workers[next_wid]->get_first_quoted_newline() + 1;
+              }
               end_of_chunk_[cur_wid] = workers[next_wid]->get_first_quoted_newline();
-              start_of_chunk_[next_wid] = std::min(end_of_chunk_[next_wid], end_of_chunk_[cur_wid] + 1);
               cur_wid = next_wid;
             }
             else {
