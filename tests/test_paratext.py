@@ -23,7 +23,7 @@ class TestBasicFiles:
             filedata += ",".join([str(v) for v in row_data]) + "\n"
             for k in range(len(keys)):
                 expected[keys[k]].append(row_data[k])
-        with generate_tempfile(filedata) as fn:
+        with generate_tempfile(filedata.encode("utf-8")) as fn:
             logging.debug("filename: %s" % fn)
             actual = paratext.load_csv_to_pandas(fn, num_threads=num_threads)
             assert_dictframe_almost_equal(actual, expected)
@@ -36,8 +36,8 @@ class TestBasicFiles:
             assert_dictframe_almost_equal(actual, expected)
 
     def test_basic_empty(self):
-        file_bodies = ["", "\n", "\n\n", " ", " \n", " \n   \n \n", "\n  \n", "\v\t \n", "\n\n\n", "\n\n\n\n"]
-        file_bodies += ["\r\n", "\r\n\r\n", " ", " \r\n", " \r\n   \r\n \r\n", "\r\n  \r\n", "\r\v\t \r\n", "\r\n\r\n\r\n", "\r\n\r\n\r\n\r\n"]
+        file_bodies = [b"", b"\n", b"\n\n", b" ", b" \n", b" \n   \n \n", b"\n  \n", b"\v\t \n", b"\n\n\n", b"\n\n\n\n"]
+        file_bodies += [b"\r\n", b"\r\n\r\n", b" ", b" \r\n", b" \r\n   \r\n \r\n", b"\r\n  \r\n", b"\r\v\t \r\n", b"\r\n\r\n\r\n", b"\r\n\r\n\r\n\r\n"]
         for file_body in file_bodies:
             for num_threads in [1]:
                 yield self.do_basic_empty, file_body, num_threads
@@ -50,7 +50,7 @@ class TestBasicFiles:
                         yield self.do_basic_nums, dtype, num_rows, num_cols, num_threads
 
     def test_basic_strange1(self):
-        filedata = """A,B,C
+        filedata = b"""A,B,C
 "\\\"","",7
 "\\\\","X",8
 "\n","\\\\\\"",9"""
@@ -61,7 +61,7 @@ class TestBasicFiles:
             assert_dictframe_almost_equal(actual, expected)
 
     def test_basic_3x2x(self):
-        filedata = u"""A,B,C
+        filedata = b"""A,B,C
 1,4,7
 2,5,8
 """
@@ -72,7 +72,7 @@ class TestBasicFiles:
             assert_dictframe_almost_equal(actual, expected)
 
     def test_basic_3x1x(self):
-        filedata = u"""A,B,C
+        filedata = b"""A,B,C
 1,4,7
 """
         with generate_tempfile(filedata) as fn:
@@ -83,7 +83,7 @@ class TestBasicFiles:
 
 
     def test_basic_3x0x(self):
-        filedata = u"""A,B,C
+        filedata = b"""A,B,C
 """
         with generate_tempfile(filedata) as fn:
             expected = {"A": [], "B": [], "C": []}
