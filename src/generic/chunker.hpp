@@ -119,8 +119,15 @@ namespace ParaText {
 #endif
       for (size_t worker_id = 0; worker_id < maximum_chunks_; worker_id++) {
         long end_of_chunk = std::min(lastpos_, start_of_chunk + (long)chunk_size);
+        if (end_of_chunk < start_of_chunk) {
+          start_of_chunk = lastpos_ + 1;
+          end_of_chunk = lastpos_ + 1;
+          start_of_chunk_.push_back(start_of_chunk);
+          end_of_chunk_.push_back(end_of_chunk);
+          break;
+        }
 #ifdef PARALOAD_DEBUG
-        std::cout << "start_of_chunk: " << start_of_chunk << " end_of_chunk: " << end_of_chunk << std::endl;
+        std::cerr << ">>> start_of_chunk: " << start_of_chunk << " end_of_chunk: " << end_of_chunk << std::endl;
 #endif
         in_.clear();
         in_.seekg(end_of_chunk - 1, std::ios_base::beg);
@@ -200,12 +207,12 @@ namespace ParaText {
       std::vector<std::thread> threads;
       std::vector<std::shared_ptr<QuoteNewlineAdjustmentWorker> > workers;
       std::exception_ptr thread_exception;
-      for (size_t worker_id = 0; worker_id < maximum_chunks_; worker_id++) {
+      for (size_t worker_id = 0; worker_id < start_of_chunk_.size(); worker_id++) {
         workers.push_back(std::make_shared<QuoteNewlineAdjustmentWorker>(start_of_chunk_[worker_id],
                                                                          end_of_chunk_[worker_id]));
         threads.emplace_back(&QuoteNewlineAdjustmentWorker::parse, workers.back(), filename_);
       }
-      for (size_t thread_id = 0; thread_id < maximum_chunks_; thread_id++) {
+      for (size_t thread_id = 0; thread_id < threads.size(); thread_id++) {
         threads[thread_id].join();
         if (!thread_exception) {
           thread_exception = workers[thread_id]->get_exception();
@@ -218,7 +225,9 @@ namespace ParaText {
       size_t quotes_so_far = 0;
       size_t cur_wid = 0;
       size_t next_wid = 1;
-      quotes_so_far += workers[cur_wid]->get_num_quotes();
+      if (cur_wid < workers.size()) {
+        quotes_so_far += workers[cur_wid]->get_num_quotes();
+      }
       while (cur_wid < workers.size()) {
         if (end_of_chunk_[cur_wid] < -1 || start_of_chunk_[cur_wid] < -1) {
           start_of_chunk_[cur_wid] = -1;

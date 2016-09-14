@@ -234,7 +234,7 @@ namespace ParaText {
       Returns the number of columns parsed by this loader.
      */
     size_t     get_num_columns() const {
-      return column_chunks_.size() == 0 ? 0 : column_chunks_[0].size();
+      return column_chunks_.size() == 0 ? header_parser_.get_num_columns() : column_chunks_[0].size();
     }
 
     /*
@@ -584,6 +584,20 @@ namespace ParaText {
           thread_exception = workers[i]->get_exception();
         }
       }
+#if 0
+      if (threads.size() == 0) {
+        column_chunks_.emplace_back();
+        for (size_t col = 0; col < column_infos_.size(); col++) {
+          auto fit = forced_semantics_.find(column_infos_[col].name);
+          if (fit == forced_semantics_.end()) {
+            column_chunks_.back().push_back(std::make_shared<ColBasedChunk>(column_infos_[col].name, params.max_level_name_length, params.max_levels, Semantics::UNKNOWN));
+          }
+          else {
+            column_chunks_.back().push_back(std::make_shared<ColBasedChunk>(column_infos_[col].name, params.max_level_name_length, params.max_levels, fit->second));
+          }
+        }
+      }
+#endif
       // We're now outside the parallel region.
       if (thread_exception) {
         std::rethrow_exception(thread_exception);
