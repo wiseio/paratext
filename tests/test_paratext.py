@@ -131,7 +131,7 @@ class TestHellFiles:
             for (frame_encoding, out_encoding) in formatting:
                 for include_null in [False, True]:
                     for allow_quoted_newlines in [False, True]:
-                        for num_rows in [0, 1,2,3,4,10,100,1000,3000]:
-                            for num_cols in [1,2,3,4,5,10,20,30]:
-                                for num_threads in [1,2,3,4,5,8,10,20,30]:
+                        for num_rows in [0, 1,2,3,4,10,100,600]:
+                            for num_cols in [1,2,3,4,5,10]:
+                                for num_threads in [1,2,4,8,16]:
                                     yield self.do_hell_frame, dos, frame_encoding, out_encoding, include_null, allow_quoted_newlines, num_rows, num_cols, num_threads
