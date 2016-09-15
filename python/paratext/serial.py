@@ -97,13 +97,13 @@ def save_frame(filename, frame, allow_quoted_newlines=True, out_encoding='arbitr
     {0}
     """
     f = open(filename, 'wb')
-    write_frame(f, frame, allow_quoted_newlines, out_encoding=out_encoding, dos=dos)
+    write_frame(f, frame, allow_quoted_newlines=allow_quoted_newlines, out_encoding=out_encoding, dos=dos)
     f.close()
 
 @_docstring_parameter(_save_frame_params)
 def write_frame(stream, frame, allow_quoted_newlines=True, out_encoding='arbitrary', dos=False):
     """
-    Saves a dictframe/DataFrame of sequences of the same size to a byte stream (binary required.
+    Saves a dictframe/DataFrame of sequences of the same size to a byte stream (binary mode).
 
     Parameters
     ----------
