@@ -44,11 +44,15 @@ class TestBasicFiles:
                 yield self.do_basic_empty, file_body, num_threads
 
     def test_basic_ints(self):
-        for dtype in [np.float_, np.uint8]:
+        for dtype in [np.float_, np.int64]:
             for num_rows in [0, 1, 2, 3, 4, 5, 6, 10, 100, 1000]:
                 for num_cols in [1, 2, 3, 4, 5, 6, 10]:
-                    for num_threads in [0, 1, 2, 3, 4, 5, 6, 7, 8, 15, 20]:
-                        yield self.do_basic_nums, dtype, num_rows, num_cols, num_threads
+                    if num_rows * num_cols < 20:
+                        thread_set = range(0,30)
+                    else:
+                        thread_set = [0, 1, 2, 3, 4, 5, 6, 7, 8, 15, 20]
+                        for num_threads in thread_set:
+                            yield self.do_basic_nums, dtype, num_rows, num_cols, num_threads
 
     def test_basic_strange1(self):
         filedata = b"""A,B,C

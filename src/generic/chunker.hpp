@@ -293,82 +293,94 @@ namespace ParaText {
       if (thread_exception) {
         std::rethrow_exception(thread_exception);
       }
-      size_t quotes_so_far = 0;
-      size_t cur_wid = 0;
-      size_t next_wid = 1;
-      if (cur_wid < workers.size()) {
-        quotes_so_far += workers[cur_wid]->get_num_quotes();
+      std::vector<size_t> cumulative_quote_sum(workers.size(), 0);
+      if (workers.size() > 0) {
+        cumulative_quote_sum[0] = workers[0]->get_num_quotes();
+        for (size_t i = 1; i < workers.size(); i++) {
+        cumulative_quote_sum[i] = cumulative_quote_sum[i - 1] + workers[i]->get_num_quotes();
+        }
       }
-      while (cur_wid < workers.size()) {
-        if (end_of_chunk_[cur_wid] < 0 || start_of_chunk_[cur_wid] < 0) {
-          start_of_chunk_[cur_wid] = -1;
-          end_of_chunk_[cur_wid] = -1;
 #ifdef PARALOAD_DEBUG
-          std::cerr << "negative chunk cur_wid=" << cur_wid << " next_wid=" << next_wid << std::endl;
+      std::cerr << "total unescaped quotes: " << cumulative_quote_sum.back() << std::endl;
 #endif
-          cur_wid++;
+      size_t current = 0;
+      size_t next = 1;
+      while (current < workers.size()) {
+        if (end_of_chunk_[current] < 0 || start_of_chunk_[current] < 0) {
+          start_of_chunk_[current] = -1;
+          end_of_chunk_[current] = -1;
+#ifdef PARALOAD_DEBUG
+          std::cerr << "negative chunk current=" << current << std::endl;
+#endif
+          current++;
           /*          if (next_wid < workers.size()) {
             quotes_so_far += workers[next_wid]->get_num_quotes();
             next_wid++;
           }
           continue;*/
         }
-        else if (quotes_so_far % 2 == 0) {
-          if (next_wid < workers.size()) {
-            quotes_so_far += workers[next_wid]->get_num_quotes();
+        else if (cumulative_quote_sum[next-1] % 2 == 0) { /* even number of quotes so far. */
+          if (next < workers.size()) {
 #ifdef PARALOAD_DEBUG
-            std::cerr << "cur_wid=" << cur_wid << " next_wid=" << next_wid << " quotes_so_far=" << quotes_so_far << std::endl;
+            std::cerr << "[A] current=" << current << " next=" << next << " quotes_so_far=" << cumulative_quote_sum[current] << std::endl;
 #endif
-            if (workers[next_wid]->get_first_unquoted_newline() >= 0) {
-              end_of_chunk_[cur_wid] = workers[next_wid]->get_first_unquoted_newline();
-              if (end_of_chunk_[next_wid] == workers[next_wid]->get_first_unquoted_newline()) {
-                start_of_chunk_[next_wid] = -1;
-                end_of_chunk_[next_wid] = -1;
+            long pos = workers[next]->get_first_unquoted_newline();
+            if (pos >= 0) { /* resolved */
+              end_of_chunk_[current] = pos;
+              if (end_of_chunk_[next] == pos) { /* take all of next chunk. */
+                start_of_chunk_[next] = -1;
+                end_of_chunk_[next] = -1;
+                current = next + 1;
+                next += 2;
               }
-              else {
-                start_of_chunk_[next_wid] = workers[next_wid]->get_first_unquoted_newline() + 1;
+              else {  /* take part of next chunk. */
+                start_of_chunk_[next] = pos + 1;
+                current = next;
+                next++;
               }
-              cur_wid = next_wid;
             }
-            else {
-              end_of_chunk_[cur_wid] = end_of_chunk_[next_wid];
-              start_of_chunk_[next_wid] = -1;
-              end_of_chunk_[next_wid] = -1;
+            else { /* no resolution. do not increment current */
+              end_of_chunk_[current] = end_of_chunk_[next];
+              start_of_chunk_[next] = -1;
+              end_of_chunk_[next] = -1;
+              next++;
             }
-            next_wid++;
           }
-          else {
-            end_of_chunk_[cur_wid] = lastpos_;
+          else { /* EOF resolution. */
+            end_of_chunk_[current] = lastpos_;
             break;
           }
         }
-        else {
-          if (next_wid < workers.size()) {
-            quotes_so_far += workers[next_wid]->get_num_quotes();
+        else { /* odd number of quotes so far. */
+          if (next < workers.size()) {
 #ifdef PARALOAD_DEBUG
-            std::cerr << "cur_wid=" << cur_wid << " next_wid=" << next_wid << " quotes_so_far=" << quotes_so_far << std::endl;
+            std::cerr << "[B] current=" << current << " next=" << next << " quotes_so_far=" << cumulative_quote_sum[next] << std::endl;
 #endif
-            if (workers[next_wid]->get_first_quoted_newline() >= 0) {
-              if (end_of_chunk_[next_wid] == workers[next_wid]->get_first_quoted_newline()) {
-                start_of_chunk_[next_wid] = -1;
-                end_of_chunk_[next_wid] = -1;
+            long pos = workers[next]->get_first_quoted_newline();
+            if (pos >= 0) { /* resolution*/
+              end_of_chunk_[current] = pos;
+              if (end_of_chunk_[next] == pos) { /*take all of next chunk. */
+                start_of_chunk_[next] = -1;
+                end_of_chunk_[next] = -1;
+                current = next + 1;
+                next += 2;
               }
-              else {
-                start_of_chunk_[next_wid] = workers[next_wid]->get_first_quoted_newline() + 1;
+              else { /* take part of next chunk. */
+                start_of_chunk_[next] = pos + 1;
+                current = next;
+                next++;
               }
-              end_of_chunk_[cur_wid] = workers[next_wid]->get_first_quoted_newline();
-              cur_wid = next_wid;
             }
-            else {
-              end_of_chunk_[cur_wid] = end_of_chunk_[next_wid];
-              start_of_chunk_[next_wid] = -1;
-              end_of_chunk_[next_wid] = -1;
+            else { /*no resolution. take all of chunk. */
+              end_of_chunk_[current] = end_of_chunk_[next];
+              start_of_chunk_[next] = -1;
+              end_of_chunk_[next] = -1;
+              next++;
             }
-            next_wid++;
           }
-          else {
+          else { /* no resolution and EOF. */
             std::ostringstream ostr;
-            ostr << "The file ends with an open quote (" << quotes_so_far << ")";
+            ostr << "The file ends with an open quote; a total of " << cumulative_quote_sum[current] << ")";
             throw std::logic_error(ostr.str());
           }
         }
