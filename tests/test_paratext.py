@@ -98,7 +98,7 @@ class TestMixedFiles:
         expected, types_df = paratext.testing.generate_mixed_frame(num_rows, num_floats, num_cats, num_ints)
         with generate_tempfilename() as fn:
             logging.debug("filename: %s" % fn)
-            paratext.serial.save_frame(fn, expected, allow_quoted_newlines=True)
+            paratext.serial.save_frame(fn, expected, allow_quoted_newlines=True, out_encoding='utf-8')
             actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=True, out_encoding='utf-8', num_threads=num_threads)
             assert_dictframe_almost_equal(actual, expected)
 
