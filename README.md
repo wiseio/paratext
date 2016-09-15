@@ -224,16 +224,38 @@ Most CSV loading functions in ParaText have the following parameters:
     * `block_size`: The number of bytes to read at a time in each worker
     thread. The default is unlimited.
 
+Escape Characters
+-----------------
+
+ParaText supports backslash escape characters:
+
+    * `\t': tab
+
+    * `\n': newline
+
+    * `\r': carriage return
+
+    * `\v': vertical tab
+
+    * `\0': null terminator (0x00)
+
+    * `\b': backspace
+
+    * '\xnn': an 8-bit character represented with a 2 digit hexidecimal number.
+
+    * '\unnnn': a Unicode code point represented as 4-digit hexidecimal number.
+
+    * '\Unnnnnnnn': a Unicode code point represented as 8-digit hexiecimal number.
+
+
 Other Notes
 -----------
 
 ParaText is a work-in-progress. There are a few unimplemented features
 that may prevent it from working on all CSV files. We note them below.
 
-1. ParaText does not yet support escape characters or comments.
-
-2. There is no way to supply type hints (e.g. `uint64` or `float`) of a
+1. There is no way to supply type hints (e.g. `uint64` or `float`) of a
 column.  Only the interpretation of a column (numeric, categorical, or
 text) can be forced.
 
-3. DateTime support will be added in a future release.
+2. DateTime support will be added in a future release.

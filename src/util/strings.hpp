@@ -70,8 +70,8 @@
   };
 
   inline long get_decimal_from_ascii_hex(char x) {
-    char y = tolower(x);
-    return (y >= 'a') ? (y - 'a') + 10 : (y - '0');
+    //char y = tolower(x);
+    return (x >> 6) * 9 + (0x0F & x);
   }
 
   /*
@@ -255,41 +255,55 @@
 	    case 'x':
 	      {
 		int sumv = 0;
-		int multipliers[] = {0x10, 0x01};
 		for (int i = 0; i < 2; i++) {
-		  if (begin + 1 != end) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
 		    int digit = *begin;
-		    if (isxdigit(digit)) {
-		      sumv += multipliers[i] * get_decimal_from_ascii_hex(digit);
-		    }
+            sumv = sumv * 16 + get_decimal_from_ascii_hex(digit);
 		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "literal \\xYY takes 2 hex digits, " << (i+1) << " given.";
+            throw std::logic_error(ostr.str());
+          }
 		}
 		*(out++) = (unsigned char)sumv;
 	      }
 	      break;
-	    case 'u': /* handle the rare case where a UCS-2 literal is provided
-		         encoded as a sequence of 7-bit ASCII characters, e.g.
-		         the string "\\u7c7b".
-
-			 Note: WiseML does NOT support reading files
-			 encoded in UCS-2/UTF-16, only ASCII and
-			 UTF-8. This allows UCS-2 literals in
-			 non-UCS-2 ASCII files.
-                       */
+	    case 'u':
 	      {
-		int sumv = 0;
-		int multipliers[] = {0x1000, 0x0100, 0x0010, 0x0001};
+		long sumv = 0;
 		for (int i = 0; i < 4; i++) {
-		  if (begin + 1 != end) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
-		    int digit = *begin;
-		    if (isxdigit(digit)) {
-		      sumv += multipliers[i] * get_decimal_from_ascii_hex(digit);
-		    }
+		    int digit = get_decimal_from_ascii_hex(*begin);
+            sumv = sumv * 16 + digit;
 		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "unicode literal \\uyyyy takes 4 hex digits for codepoint.";
+            throw std::logic_error(ostr.str());
+          }
 		}
-		ucs2_to_utf8(sumv, out);
+        WiseIO::convert_utf32_to_utf8(&sumv, &sumv + 1, out);
+	      }
+	      break;
+	    case 'U':
+	      {
+		long sumv = 0;
+		for (int i = 0; i < 8; i++) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
+		    begin++;
+		    int digit = get_decimal_from_ascii_hex(*begin);
+            sumv = sumv * 16 + digit;
+		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "unicode literal \\Uyyyyyyyy takes 8 hex digits for codepoint.";
+            throw std::logic_error(ostr.str());
+          }
+		}
+        WiseIO::convert_utf32_to_utf8(&sumv, &sumv + 1, out);
 	      }
 	      break;
 	    case '0':
@@ -354,41 +368,55 @@
 	    case 'x':
 	      {
 		int sumv = 0;
-		int multipliers[] = {0x10, 0x01};
 		for (int i = 0; i < 2; i++) {
-		  if (begin + 1 != end) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
 		    int digit = *begin;
-		    if (isxdigit(digit)) {
-		      sumv += multipliers[i] * get_decimal_from_ascii_hex(digit);
-		    }
+            sumv = sumv * 16 + get_decimal_from_ascii_hex(digit);
 		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "hex literal \\xYY takes 2 hex digits.";
+            throw std::logic_error(ostr.str());
+          }
 		}
 		*(out++) = (unsigned char)sumv;
 	      }
 	      break;
-	    case 'u': /* handle the rare case where a UCS-2 literal is provided
-		         encoded as a sequence of 7-bit ASCII characters, e.g.
-		         the string "\\u7c7b".
-
-			 Note: WiseML does NOT support reading files
-			 encoded in UCS-2/UTF-16, only ASCII and
-			 UTF-8. This allows UCS-2 literals in
-			 non-UCS-2 ASCII files.
-                       */
+	    case 'u':
 	      {
-		int sumv = 0;
-		int multipliers[] = {0x1000, 0x0100, 0x0010, 0x0001};
+		long sumv = 0;
 		for (int i = 0; i < 4; i++) {
-		  if (begin + 1 != end) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
-		    int digit = *begin;
-		    if (isxdigit(digit)) {
-		      sumv += multipliers[i] * get_decimal_from_ascii_hex(digit);
-		    }
+		    int digit = get_decimal_from_ascii_hex(*begin);
+            sumv = sumv * 16 + digit;
 		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "unicode literal \\uyyyy takes 4 hex digits for codepoint.";
+            throw std::logic_error(ostr.str());
+          }
 		}
-		ucs2_to_utf8(sumv, out);
+        WiseIO::convert_utf32_to_utf8(&sumv, &sumv + 1, out);
+	      }
+	      break;
+	    case 'U':
+	      {
+		long sumv = 0;
+		for (int i = 0; i < 8; i++) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
+		    begin++;
+		    int digit = get_decimal_from_ascii_hex(*begin);
+            sumv = sumv * 16 + digit;
+		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "unicode literal \\Uyyyyyyyy takes 8 hex digits for codepoint.";
+            throw std::logic_error(ostr.str());
+          }
+		}
+        WiseIO::convert_utf32_to_utf8(&sumv, &sumv + 1, out);
 	      }
 	      break;
 	    case '0':

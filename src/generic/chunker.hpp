@@ -110,10 +110,17 @@ namespace ParaText {
     }
 
   private:
-    long get_num_trailing_escapes(long start_of_chunk, long end_of_chunk) {
+    std::pair<long, char> get_num_trailing_escapes(long start_of_chunk, long end_of_chunk) {
       long num_trailing_escapes = 0;
       long k = end_of_chunk;
-      for (; k >= start_of_chunk; k++) {
+      char successor = 0;
+      if (end_of_chunk < lastpos_) {
+        in_.clear();
+        in_.seekg(end_of_chunk + 1, std::ios_base::beg);
+        in_.read(&successor, 1);
+      }
+
+      for (; k >= start_of_chunk; k--) {
         in_.clear();
         in_.seekg(k, std::ios_base::beg);
         char buf;
@@ -124,7 +131,7 @@ namespace ParaText {
         }
         num_trailing_escapes++;
       }
-      return num_trailing_escapes;
+      return std::make_pair(num_trailing_escapes, successor);
     }
 
     void compute_offsets(bool allow_quoted_newlines = true) {
@@ -149,13 +156,54 @@ namespace ParaText {
         if (worker_id == maximum_chunks_ - 1) {
           end_of_chunk = lastpos_;
         }
-        long trailing_escapes = get_num_trailing_escapes(start_of_chunk, end_of_chunk);
+        long trailing_escapes;
+        char trailing_successor;
+        std::tie(trailing_escapes, trailing_successor) = get_num_trailing_escapes(start_of_chunk, end_of_chunk);
         if (trailing_escapes % 2 == 1) {
-          if (end_of_chunk == lastpos_) {
-            throw std::logic_error("file ends with a trailing escape");
+          long extra = 0;
+          switch (trailing_successor) {
+          case 'x': /* \xYY */
+            extra = 3;
+            break;
+          case 'u': /* \uXXXX */
+            extra = 5;
+            break;
+          case 'U': /* \UXXXXXXXX */
+            extra = 9;
+            break;
+          case 'n':
+          case '0':
+          case 'r':
+          case 'v':
+          case 't':
+          case 'b':
+          case '\\':
+          case '\"':
+          case '\'':
+          case '{':
+          case '}':
+          case ' ':
+          case ',':
+          case ')':
+          case '(':
+            extra = 1;
+            break;
+          default:
+            {
+              std::ostringstream ostr;
+              ostr << "invalid escape character: \\" << ostr;
+            }
+          }
+          if (end_of_chunk + extra > lastpos_) {
+            std::ostringstream ostr;
+            ostr << "file ends with a trailing escape sequence \\" << trailing_successor;
+            throw std::logic_error(ostr.str());
           }
           else {
             end_of_chunk++;
+#ifdef PARALOAD_DEBUG
+            std::cerr << "cover escape: " << end_of_chunk << std::endl;
+#endif
           }
         }
         start_of_chunk_.push_back(start_of_chunk);
@@ -236,6 +284,11 @@ namespace ParaText {
           thread_exception = workers[thread_id]->get_exception();
         }
       }
+      for (size_t chunk_id = 0; chunk_id < workers.size(); chunk_id++) {
+#ifdef PARALOAD_DEBUG
+        std::cerr << "quotes>>> wid=" << chunk_id << " start_of_chunk: " << start_of_chunk_[chunk_id] << " end_of_chunk: " << end_of_chunk_[chunk_id] << " num_quotes: " << workers[chunk_id]->get_num_quotes() << std::endl;
+#endif
+      }
       // We're now outside the parallel region.
       if (thread_exception) {
         std::rethrow_exception(thread_exception);
@@ -254,10 +307,13 @@ namespace ParaText {
           std::cerr << "negative chunk cur_wid=" << cur_wid << " next_wid=" << next_wid << std::endl;
 #endif
           cur_wid++;
-          next_wid = cur_wid + 1;
-          continue;
+          /*          if (next_wid < workers.size()) {
+            quotes_so_far += workers[next_wid]->get_num_quotes();
+            next_wid++;
+          }
+          continue;*/
         }
-        if (quotes_so_far % 2 == 0) {
+        else if (quotes_so_far % 2 == 0) {
           if (next_wid < workers.size()) {
             quotes_so_far += workers[next_wid]->get_num_quotes();
 #ifdef PARALOAD_DEBUG

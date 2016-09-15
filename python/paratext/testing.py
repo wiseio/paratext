@@ -78,6 +78,32 @@ def generate_hell_frame(num_rows, num_columns, include_null=False, fmt='arbitrar
     return pandas.DataFrame(frame)
 
 def save_frame(filename, frame, allow_quoted_newlines=True, out_format='arbitrary', dos=False):
+    """
+    Saves a dictframe/DataFrame of sequences of the same size to a CSV file.
+
+    Parameters
+    ----------
+    filename : str, unicode
+         The name of the filename to write.
+
+    frame : DataFrame, mapping, dict
+         This object must be DataFrame-like (ie implement .keys() and __getattr__).
+
+    allow_quoted_newlines : bool
+         Whether to allow newlines to be unescaped in a quoted string. If True, if newlines
+         are encountered, they will be escaped with two ASCII characters.
+
+    out_encoding : bool
+         The encoding to use. Valid options include:
+            - `utf-8`: UTF-8 data
+            - `arbitrary`: arbitrary bytes (values 0x00-0xFF)
+            - `printable_ascii`: values 0x20-0xFF. 0x0A is included if `allow_quoted_newlines`=True
+            - `ascii`: values 0x00-0x7F
+         If any values are outside of this range, they are backslash-escaped.
+
+    dos : bool
+         Whether to add a carriage return before a newline as done in Windows and DOS.
+    """
     f = open(filename, 'wb')
     write_frame(f, frame, allow_quoted_newlines, out_format=out_format, dos=dos)
     f.close()
@@ -162,6 +188,14 @@ def write_frame(stream, frame, allow_quoted_newlines=True, out_format='arbitrary
 
 @contextmanager
 def generate_tempfile(filedata):
+    """
+    A context manager that generates a temporary file object that will be deleted
+    when the context goes out of scope. The mode of the file is "wb".
+
+    Parameters
+    ----------
+    filedata : The data of the file to write as a bytes object.
+    """
     f = NamedTemporaryFile(delete=False, mode="wb", prefix="paratext-tests")
     f.write(filedata)
     name = f.name
@@ -171,6 +205,10 @@ def generate_tempfile(filedata):
 
 @contextmanager
 def generate_tempfilename():
+    """
+    A context manager that generates a temporary filename that will be deleted
+    when the context goes out of scope.
+    """
     f = NamedTemporaryFile(delete=False, prefix="paratext-tests")
     name = f.name
     f.close()

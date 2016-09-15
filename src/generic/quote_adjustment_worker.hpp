@@ -82,6 +82,9 @@ public:
             }
             else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q1:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = false;
               i++;
               break;
@@ -103,6 +106,9 @@ public:
             }
             else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q2:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = true;
               i++;
               break;
@@ -111,7 +117,7 @@ public:
               first_unquoted_newline_ = current + i;
               i++;
               break;
-            }            
+            }
           }
         }
       }
@@ -126,6 +132,9 @@ public:
             }
             else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q3:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = false;
               i++;
               break;
@@ -142,6 +151,9 @@ public:
             }
             else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q4:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = true;
               i++;
               break;
@@ -165,6 +177,9 @@ public:
             }
             else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q5:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = false;
               i++;
               break;
@@ -186,6 +201,9 @@ public:
             }
             else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q6:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = true;
               i++;
               break;
@@ -208,6 +226,9 @@ public:
             }
             else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q7:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = false;
               i++;
               break;
@@ -224,6 +245,9 @@ public:
             }
             else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q8:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = true;
               i++;
               break;
