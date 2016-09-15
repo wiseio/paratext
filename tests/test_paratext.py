@@ -1,6 +1,7 @@
 import os
 import unittest
 import paratext.testing
+import paratext.serial
 from paratext.testing import assert_dictframe_almost_equal, generate_tempfile, generate_tempfilename
 import pandas.util.testing
 import numpy as np
@@ -97,7 +98,7 @@ class TestMixedFiles:
         expected, types_df = paratext.testing.generate_mixed_frame(num_rows, num_floats, num_cats, num_ints)
         with generate_tempfilename() as fn:
             logging.debug("filename: %s" % fn)
-            paratext.testing.save_frame(fn, expected)
+            paratext.serial.save_frame(fn, expected, allow_quoted_newlines)
             actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=True, out_encoding='utf-8', num_threads=num_threads)
             assert_dictframe_almost_equal(actual, expected)
 
@@ -115,7 +116,7 @@ class TestHellFiles:
         expected = paratext.testing.generate_hell_frame(rows, cols, include_null=include_null, fmt=frame_encoding)
         with generate_tempfilename() as fn:
             logging.debug("filename: %s" % fn)
-            paratext.testing.save_frame(fn, expected, allow_quoted_newlines, out_format=out_encoding, dos=dos)
+            paratext.serial.save_frame(fn, expected, allow_quoted_newlines, out_encoding=out_encoding, dos=dos)
             actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=allow_quoted_newlines, out_encoding=out_encoding, num_threads=num_threads, convert_null_to_space=not include_null)
             assert_dictframe_almost_equal(actual, expected)
 

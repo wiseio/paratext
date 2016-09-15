@@ -69,7 +69,7 @@ the `load_csv_to_pandas` function.
 df = paratext.load_csv_to_pandas("hepatitis.csv")
 ```
 
-Its output looks something like this:
+The data frame looks something like this:
 
 ```
 In [1]: print df.head()
@@ -121,7 +121,7 @@ levels (`None` if not categorical).
       print key, repr(dict_frame[key][0:5]), levels.get(key, None)
 ```
 
-The output looks something like this:
+This gives the following output:
 
 ```
 PROTIME array([ nan,  nan,  nan,  80.,  nan], dtype=float32) None
@@ -247,6 +247,51 @@ ParaText supports backslash escape characters:
 
     * '\Unnnnnnnn': a Unicode code point represented as 8-digit hexiecimal number.
 
+Writing CSV
+-----------
+
+ParaText does yet support parallel CSV writing. However, it bundles a CSV
+writer that can be used to write DataFrames with arbitrary string and byte
+buffer data in a lossless fashion.
+
+If a character in a Python `string`, `unicode`, or `bytes`
+object could be treated as non-data when parsed (e.g. a doublequote or
+escape character), it is escaped. Moreover, any character that is outside
+the desired encoding is also escaped. This enables, for example,
+the lossless writing of non-UTF-8 to a UTF-8 file.
+
+For example, to restrict the encoding to 7-bit printable ASCII, pass
+`out_encoding='printable_ascii'`
+
+```
+   import paratext.serial
+   df = pandas.DataFrame({"X": [b"\xff\\\n \" oh my!"]})
+   paratext.serial.save_frame("lossless.csv", df, allow_quoted_newlines=True, out_encoding='printable_ascii', dos=False)
+```
+
+This results in a file:
+
+```
+"X"
+"\xff\\
+ \" oh my!"
+```
+
+Instead, pass `out_encoding='utf-8'` to ``save_frame``.
+
+```
+   import paratext.serial
+   df = pandas.DataFrame({"X": [b"\xff\\\n \" oh my!"],"Y": ["\U0001F600"]})
+   paratext.serial.save_frame("lossless2.csv", df, allow_quoted_newlines=True, out_encoding='utf-8', dos=False)
+```
+
+Now, the file only escapes cells in the DataFrame with
+non-UTF8 data. All other UTF8 characters are preserved.
+```
+"X","Y"
+"\xff\\
+ \" oh my!","<U+1F600>"
+```
 
 Other Notes
 -----------
@@ -258,4 +303,4 @@ that may prevent it from working on all CSV files. We note them below.
 column.  Only the interpretation of a column (numeric, categorical, or
 text) can be forced.
 
-2. DateTime support will be added in a future release.
+2. DateTime will be supported in a future release.

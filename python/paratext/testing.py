@@ -32,17 +32,10 @@ from contextlib import contextmanager
 from six.moves import range
 import six
 
-if sys.version_info>=(3,0):
-    def _repr_bytes(o):
-        return bytes(repr(o), 'utf-8')
-else:
-    def _repr_bytes(o):
-        return repr(o)
-
-def as_quoted_string(s, do_not_escape_newlines=False):
-    return paratext_internal.as_quoted_string(s, do_not_escape_newlines)
-
 def generate_hell_frame(num_rows, num_columns, include_null=False, fmt='arbitrary'):
+    """
+    Generate a DataFrame of columns containing randomly generated data.
+    """
     if include_null:
         min_byte = 0
     else:
@@ -76,115 +69,6 @@ def generate_hell_frame(num_rows, num_columns, include_null=False, fmt='arbitrar
             data.append(cell)
         frame[key] = data
     return pandas.DataFrame(frame)
-
-def save_frame(filename, frame, allow_quoted_newlines=True, out_format='arbitrary', dos=False):
-    """
-    Saves a dictframe/DataFrame of sequences of the same size to a CSV file.
-
-    Parameters
-    ----------
-    filename : str, unicode
-         The name of the filename to write.
-
-    frame : DataFrame, mapping, dict
-         This object must be DataFrame-like (ie implement .keys() and __getattr__).
-
-    allow_quoted_newlines : bool
-         Whether to allow newlines to be unescaped in a quoted string. If True, if newlines
-         are encountered, they will be escaped with two ASCII characters.
-
-    out_encoding : bool
-         The encoding to use. Valid options include:
-            - `utf-8`: UTF-8 data
-            - `arbitrary`: arbitrary bytes (values 0x00-0xFF)
-            - `printable_ascii`: values 0x20-0xFF. 0x0A is included if `allow_quoted_newlines`=True
-            - `ascii`: values 0x00-0x7F
-         If any values are outside of this range, they are backslash-escaped.
-
-    dos : bool
-         Whether to add a carriage return before a newline as done in Windows and DOS.
-    """
-    f = open(filename, 'wb')
-    write_frame(f, frame, allow_quoted_newlines, out_format=out_format, dos=dos)
-    f.close()
-
-def write_frame(stream, frame, allow_quoted_newlines=True, out_format='arbitrary', dos=False):
-    # In case .keys() is non-deterministic
-    keys = list(frame.keys())
-    cols = []
-
-    psafe=paratext_internal.SafeStringOutput()
-    psafe.escape_nonascii(True)
-    psafe.escape_nonprintables(True)
-    safe=paratext_internal.SafeStringOutput()
-    safe.escape_special(True)
-    if out_format == 'utf-8':
-        safe.escape_nonutf8(True)
-    elif out_format == 'ascii':
-        safe.escape_nonascii(True)
-    elif out_format == 'printable_ascii':
-        safe.escape_nonascii(True)
-        safe.escape_nonprintables(True)
-    if not allow_quoted_newlines:
-        safe.escape_newlines(True)
-        psafe.escape_newlines(True)
-    safe.double_quote_output(True)
-    psafe.double_quote_output(True)
-    for col in range(len(keys)):
-        if col > 0:
-            stream.write(b",")
-            stream.flush()
-        key = keys[col]
-        if out_format == 'utf-8':
-            stream.flush()
-            if isinstance(key, bytes):
-                skey = psafe.to_raw_string(key)
-            else:
-                skey = safe.to_raw_string(key)
-            stream.write(skey)
-        else:
-            stream.flush()
-            if isinstance(key, bytes):
-                skey = psafe.to_raw_string(key)
-            else:
-                skey = safe.to_raw_string(key)
-            stream.write(skey)
-        if isinstance(frame[key], pandas.Series):
-            cols.append(frame[key].values)
-        else:
-            cols.append(np.asarray(frame[key]))
-    if dos:
-        stream.write(b"\r\n")
-    else:
-        stream.write(b"\n")
-    if hasattr(frame, "shape"):
-        num_rows = frame.shape[0]
-    elif len(keys) == 0:
-        num_rows = 0
-    else:
-        num_rows = len(frame[keys[0]])
-    for row in range(num_rows):
-        for col in range(len(cols)):
-            if col > 0:
-                stream.write(b',')
-            val = cols[col][row]
-            if np.issubdtype(type(val), np.string_) or np.issubdtype(type(val), np.unicode_) or isinstance(val, six.string_types):
-                if out_format == 'utf-8':
-                    #sval = safe.to_utf8_string(val)
-                    if isinstance(val, bytes):
-                        sval = psafe.to_raw_string(val)
-                    else:
-                        sval = safe.to_raw_string(val)
-                    stream.write(sval)
-                else:
-                    sval = safe.to_raw_string(val)
-                    stream.write(sval)
-            else:
-                stream.write(bytes(_repr_bytes(val)))
-        if dos:
-            stream.write(b"\r\n")
-        else:
-            stream.write(b"\n")
 
 @contextmanager
 def generate_tempfile(filedata):
