@@ -102,8 +102,8 @@ def generate_tempfilename():
 def assert_seq_almost_equal(left, right):
     left = np.asarray(left)
     right = np.asarray(right)
-    left_is_string = np.issubdtype(left.dtype, np.str_) or np.issubdtype(left.dtype, np.unicode_) or np.issubdtype(left.dtype, np.object_)
-    right_is_string = np.issubdtype(right.dtype, np.str_) or np.issubdtype(right.dtype, np.unicode_) or np.issubdtype(right.dtype, np.object_)
+    left_is_string = np.issubdtype(left.dtype, np.str_) or np.issubdtype(left.dtype, np.unicode_) or left.dtype == np.object_
+    right_is_string = np.issubdtype(right.dtype, np.str_) or np.issubdtype(right.dtype, np.unicode_) or right.dtype == np.object_
     if np.issubdtype(left.dtype, np.integer) and np.issubdtype(right.dtype, np.integer):
         if not (left.shape == right.shape):
             raise AssertionError("integer sequences have different sizes: %s vs %s" % (str(left.shape), str(right.shape)))
@@ -113,10 +113,12 @@ def assert_seq_almost_equal(left, right):
     elif np.issubdtype(left.dtype, np.floating) and np.issubdtype(right.dtype, np.floating):
         np.testing.assert_almost_equal(left, right)
     elif left_is_string and not right_is_string:
-        raise AssertionError("sequences differ by type: left is string and right is %s" % (str(right.dtype)))
+        if len(left) > 0 and len(right) > 0:
+            raise AssertionError("sequences differ by dtype: left is string and right is %s" % (str(right.dtype)))
     elif not left_is_string and right_is_string:
-        raise AssertionError("sequences differ by type: left is %s and right is string" % (str(right.dtype)))
-    elif left_is_string or right_is_string:
+        if len(left) > 0 and len(right) > 0:
+            raise AssertionError("sequences differ by dtype: left is %s and right is string" % (str(left.dtype)))
+    elif left_is_string and right_is_string:
         q = np.zeros((len(left)))
         for i in range(len(q)):
             q[i] = not paratext_internal.are_strings_equal(left[i], right[i])
