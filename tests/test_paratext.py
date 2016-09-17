@@ -9,10 +9,14 @@ import logging
 
 class TestBasicFiles:
 
-    def do_basic_nums(self, dtype, num_rows, num_columns, num_threads):
-        keys = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
-        keys = keys[0:num_columns]
-        filedata = ','.join(keys[0:num_columns]) + "\n"
+    def do_basic_nums(self, dtype, num_rows, num_columns, num_threads, number_only, no_header):
+        if no_header:
+            filedata = ''
+            keys = ["col%d" % k for k in range(num_columns)] 
+        else:
+            keys = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
+            keys = keys[0:num_columns]
+            filedata = ','.join(keys[0:num_columns]) + "\n"
         expected = {}
         for key in keys:
             expected[key] = []
@@ -26,7 +30,7 @@ class TestBasicFiles:
                 expected[keys[k]].append(row_data[k])
         with generate_tempfile(filedata.encode("utf-8")) as fn:
             logging.debug("filename: %s" % fn)
-            actual = paratext.load_csv_to_pandas(fn, num_threads=num_threads)
+            actual = paratext.load_csv_to_pandas(fn, num_threads=num_threads, number_only=number_only, no_header=no_header)
             assert_dictframe_almost_equal(actual, expected)
 
     def do_basic_empty(self, file_body, num_threads):
@@ -44,15 +48,17 @@ class TestBasicFiles:
                 yield self.do_basic_empty, file_body, num_threads
 
     def test_basic_ints(self):
-        for dtype in [np.float_, np.int64]:
-            for num_rows in [0, 1, 2, 3, 4, 5, 6, 10, 100, 1000]:
-                for num_cols in [1, 2, 3, 4, 5, 6, 10]:
-                    if num_rows * num_cols < 20:
-                        thread_set = range(0,30)
-                    else:
-                        thread_set = [0, 1, 2, 3, 4, 5, 6, 7, 8, 15, 20]
-                        for num_threads in thread_set:
-                            yield self.do_basic_nums, dtype, num_rows, num_cols, num_threads
+        for no_header in [False, True]:
+            for number_only in [False, True]:
+                for dtype in [np.float_, np.int64]:
+                    for num_rows in [0, 1, 2, 3, 4, 5, 6, 10, 100, 1000]:
+                        for num_cols in [1, 2, 3, 4, 5, 6, 10]:
+                            if num_rows * num_cols < 20:
+                                thread_set = range(0,30)
+                            else:
+                                thread_set = [0, 1, 2, 3, 4, 5, 6, 7, 8, 15, 20]
+                                for num_threads in thread_set:
+                                    yield self.do_basic_nums, dtype, num_rows, num_cols, num_threads, number_only, no_header
 
     def test_basic_strange1(self):
         filedata = b"""A,B,C
