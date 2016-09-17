@@ -49,10 +49,52 @@ namespace ParaText {
   private:
     PyObject *object;
   };
+
+  int PyBytes_GenericCheck(PyObject *obj) {
+#if PY_MAJOR_VERSION >= 3
+    return PyBytes_Check(obj);
+#else
+    return PyString_Check(obj);
+#endif
+  }
+
+  std::string PyObject_ToStdString(PyObject *obj) {
+    PyRefGuard guard(PyObject_Bytes(obj));
+#if PY_MAJOR_VERSION >= 3
+    Py_ssize_t length = PyBytes_Size(guard.get());
+    char *buffer = PyBytes_AsString(guard.get());
+#else
+    char *buffer = PyString_AsString(guard.get());
+    Py_ssize_t length = (size_t)PyString_Size(guard.get());
+#endif
+    return std::string(buffer, buffer + length);
+  }
+
+  void PyBytes_AsCharString(PyObject *obj, char **buffer, Py_ssize_t *length) {
+#if PY_MAJOR_VERSION >= 3
+    *length = PyBytes_Size(obj);
+    *buffer = PyBytes_AsString(obj);
+#else
+    PyString_AsStringAndSize(obj, buffer, length);
+#endif
+  }
+
+  std::string PyBytes_AsStdString(PyObject *obj) {
+    char *buffer;
+    Py_ssize_t length;
+    PyBytes_AsCharString(obj, &buffer, &length);
+#if PY_MAJOR_VERSION >= 3
+    length = PyBytes_Size(obj);
+    buffer = PyBytes_AsString(obj);
+#else
+    PyString_AsStringAndSize(obj, &buffer, &length);
+#endif
+    return std::string(buffer, buffer + length);
+  }
   
   ParaText::IteratorElementType get_element_type(PyObject *obj) {
     ParaText::IteratorElementType next_type;
-    if (PyString_Check(obj)) {
+    if (PyBytes_GenericCheck(obj)) {
       next_type = ParaText::IteratorElementType::STRING;
     }
     else if (PyUnicode_Check(obj)) {
@@ -123,10 +165,11 @@ namespace ParaText {
     else if (PyFloat_Check(obj)) {
       retval = (long)PyFloat_AsDouble(obj);
     }
-    else if (PyString_Check(obj)) {
-      char *buf = PyString_AsString(obj);
-      size_t len = (size_t)PyString_Size(obj);
-      retval = ::fast_atoi<long>(buf, buf + len);
+    else if (PyBytes_GenericCheck(obj)) {
+      char *buf;
+      Py_ssize_t length;
+      PyBytes_AsCharString(obj, &buf, &length);
+      retval = ::fast_atoi<long>(buf, buf + length);
     }
     else if (PyUnicode_Check(obj)) {
       PyRefGuard temp(PyUnicode_AsUTF8String(obj));
@@ -172,19 +215,9 @@ namespace ParaText {
   }
     
   std::string get_as_string(PyObject *obj, size_t) {
-#if PY_MAJOR_VERSION >= 3
-    if (PyBytes_Check(obj)) {
-      char *buf = PyBytes_AsString(obj);
-      size_t len = (size_t)PyBytes_Size(obj);
-      return std::string(buf, buf + len);
+    if (PyBytes_GenericCheck(obj)) {
+      return PyBytes_AsStdString(obj);
     }
-#else
-    if (PyString_Check(obj)) {
-      char *buf = PyString_AsString(obj);
-      size_t len = (size_t)PyString_Size(obj);
-      return std::string(buf, buf + len);
-    }
-#endif
     else if (PyUnicode_Check(obj)) {
       PyRefGuard temp(PyUnicode_AsUTF8String(obj));
       if (temp.get() == NULL) {
@@ -220,10 +253,7 @@ namespace ParaText {
       return ostr.str();
     }
     else {
-      PyRefGuard guard(PyObject_Str(obj));
-      char *buf = PyString_AsString(guard.get());
-      size_t len = (size_t)PyString_Size(guard.get());
-      return std::string(buf, buf + len);
+      return PyObject_ToStdString(obj);
     }
   }
   
@@ -282,10 +312,11 @@ namespace ParaText {
     else if (PyBool_Check(obj)) {
       retval = PyObject_IsTrue(obj);
     }
-    else if (PyString_Check(obj)) {
-      char *buf = PyString_AsString(obj);
-      size_t len = (size_t)PyString_Size(obj);
-      retval = ::bsd_strtod(buf, buf + len);
+    else if (PyBytes_GenericCheck(obj)) {
+      char *buf;
+      Py_ssize_t length;
+      PyBytes_AsCharString(obj, &buf, &length);
+      retval = ::bsd_strtod(buf, buf + length);
     }
     else if (PyUnicode_Check(obj)) {
       PyRefGuard temp(PyUnicode_AsUTF8String(obj));
@@ -369,10 +400,11 @@ namespace ParaText {
       size = PyUnicode_GET_DATA_SIZE(temp.get());
       return get_as_datetime(buf, size);
     }
-    else if (PyString_Check(obj)) {
-      char *buf = PyString_AsString(obj);
-      size_t len = (size_t)PyString_Size(obj);
-      return get_as_datetime(buf, len);
+    else if (PyBytes_GenericCheck(obj)) {
+      const char *buf;
+      Py_ssize_t length;
+      PyBytes_AsCharString(obj, &buf, &length);
+      return get_as_datetime(buf, length);
     }
     else {
       throw std::logic_error("cannot convert item to string");

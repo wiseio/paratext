@@ -24,6 +24,7 @@ namespace WiseIO {
     typedef unsigned char WUTF8;
     static const WUTF8 firstByteMark[7] = { 0x00, 0x00, 0xC0, 0xE0, 0xF0, 0xF8, 0xFC };
     int result = 0;
+    unsigned char buf[4] = {0,0,0,0};
     for (InputIterator it = start; it != end; it++) {
       WUTF32 ch = *it;
       unsigned short bytesToWrite = 0;
@@ -49,7 +50,6 @@ namespace WiseIO {
         result = 1;
         break;
       }
-      unsigned char buf[4];
       switch (bytesToWrite) { /* note: everything falls through. */
       case 4: buf[3] = (WUTF8)((ch | byteMark) & byteMask); ch >>= 6;
       case 3: buf[2] = (WUTF8)((ch | byteMark) & byteMask); ch >>= 6;

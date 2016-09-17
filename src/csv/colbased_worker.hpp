@@ -254,6 +254,8 @@ public:
           handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
         }
       }
+    } else {
+      handlers_[column_index_]->process_integer(0);
     }
     column_index_++;
     token_.clear();

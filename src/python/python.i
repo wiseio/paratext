@@ -28,6 +28,23 @@
   import_array();
 %}
 
+#define PARATEXT_TYPEMAP_EXCEPTION_START try {
+
+#define PARATEXT_TYPEMAP_EXCEPTION_END    } catch (const std::string &e) {\
+      std::string s = e;\
+      SWIG_exception(SWIG_RuntimeError, s.c_str());\
+      SWIG_fail;\
+    } catch (const std::exception &e) {\
+      SWIG_exception(SWIG_RuntimeError, e.what());\
+      SWIG_fail;\
+    } catch (const char *emsg) {\
+      SWIG_exception(SWIG_RuntimeError, emsg);\
+      SWIG_fail;\
+    } catch (...) {\
+      SWIG_exception(SWIG_RuntimeError, "unknown exception");\
+      SWIG_fail;\
+    }
+
 %exception {
     try {
         $action
@@ -35,8 +52,11 @@
       std::string s = e;
       SWIG_exception(SWIG_RuntimeError, s.c_str());
       SWIG_fail;
-    } catch (std::exception &e) {
+    } catch (const std::exception &e) {
       SWIG_exception(SWIG_RuntimeError, e.what());
+      SWIG_fail;
+    } catch (const char *emsg) {
+      SWIG_exception(SWIG_RuntimeError, emsg);
       SWIG_fail;
     } catch (...) {
       SWIG_exception(SWIG_RuntimeError, "unknown exception");
@@ -109,13 +129,17 @@
 */
 
 %typemap(in) const std::string & {
+  PARATEXT_TYPEMAP_EXCEPTION_START
   std::unique_ptr<std::string> result(new std::string(ParaText::get_as_string($input, 0)));
   $1 = result.release();
+  PARATEXT_TYPEMAP_EXCEPTION_END
 }
 
 %typemap(in) std::string & {
+  PARATEXT_TYPEMAP_EXCEPTION_START
   std::unique_ptr<std::string> result(new std::string(ParaText::get_as_string($input, 0)));
   $1 = result.release();
+  PARATEXT_TYPEMAP_EXCEPTION_END
 }
 
 %typemap(freearg) const std::string & {

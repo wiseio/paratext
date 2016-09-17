@@ -96,6 +96,26 @@ class TestBasicFiles:
             actual = paratext.load_csv_to_pandas(fn)
             assert_dictframe_almost_equal(actual, expected)
 
+    def test_basic_empty_cells_num(self):
+        filedata = b"""A,B,C,D,E,F
+#,1,#,#,2,#
+3,#,#,4,5,#
+6,#,#,#,#,#
+#,7,#,#,#,#
+#,#,8,#,#,#
+#,#,#,9,#,#
+#,#,#,#,10,#
+#,#,#,#,#,11
+#,#,12,#,#,13
+14,#,#,15,16,17
+"""
+        filedata = filedata.replace(b"#", b"")
+        with generate_tempfile(filedata) as fn:
+            expected = {"A": [0,3,6,0,0,0,0,0,0,14], "B": [1,0,0,7,0,0,0,0,0,0], "C": [0,0,0,0,8,0,0,0,12,0], "D": [0,4,0,0,0,9,0,0,0,15], "E": [2,5,0,0,0,0,10,0,0,16], "F": [0,0,0,0,0,0,0,11,13,17]}
+            logging.debug("filename: %s" % fn)
+            actual = paratext.load_csv_to_pandas(fn, number_only=True)
+            assert_dictframe_almost_equal(actual, expected)
+
 class TestMixedFiles:
 
     def run_case(self, num_rows, num_cats, num_floats, num_ints, num_threads):
