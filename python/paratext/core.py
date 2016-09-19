@@ -28,7 +28,10 @@ Loads text files using multiple cores.
 
 import paratext_internal as pti
 
+import os
+import six
 from six.moves import range
+from six.moves.urllib_parse import urlparse
 
 import random
 import numpy as np
@@ -82,9 +85,21 @@ _csv_load_params_doc = """
     num_names : sequence
         A list of column names that should be treated as numeric
         regardless of its inferred type.
+
+    in_encoding : str
+        The encoding of the data read from the file. (default=None)
+
+    out_encoding : str
+        The encoding of the strings returned. If set to 'utf-8', the
+        parsed data will be converted to UTF-8 unicode object (Python 2.7)
+        or str object (Python 3+). Otherwise a str object (Python 2.7)
+        or bytes object (Python 3+) is returned. (default=None)
+
+    convert_null_to_space : bool
+        Whether to convert null terminator characters to spaces. (default=False)
 """
 
-def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None):
+def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, convert_null_to_space=True):
     params = pti.ParseParams()
     params.allow_quoted_newlines = allow_quoted_newlines
     if num_threads > 0:
@@ -93,14 +108,26 @@ def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, nu
         params.num_threads = int(max(pti.get_num_cores(), 4))
     params.number_only = number_only
     params.no_header = no_header
+    params.convert_null_to_space = convert_null_to_space
     if max_levels is not None:
         params.max_levels = max_levels;
     if max_level_name_length is not None:
         params.max_level_name_length = max_level_name_length
     return params
 
+def _make_posix_filename(fn_or_uri):
+     parse_result = urlparse(fn_or_uri)
+     if parse_result.scheme in ('', 'file'):
+          result = parse_result.path
+     else:
+          raise ValueError("unsupported protocol '%s'" % fn_or_uri)
+     if six.PY2 and isinstance(result, unicode):
+          # SWIG needs UTF-8
+          result = result.encode("utf-8")
+     return result
+
 @_docstring_parameter(_csv_load_params_doc)
-def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None):
+def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=False, block_size=32768, number_only=False, no_header=False, max_level_name_length=None, max_levels=None, cat_names=None, text_names=None, num_names=None, in_encoding=None, out_encoding=None, convert_null_to_space=True):
     """
     Creates a ParaText internal C++ CSV reader object and reads the CSV
     file in parallel. This function ordinarily should not be called directly.
@@ -125,20 +152,36 @@ def internal_create_csv_loader(filename, num_threads=0, allow_quoted_newlines=Fa
         params.num_threads = int(max(pti.get_num_cores(), 4))
     params.number_only = number_only
     params.no_header = no_header
+    params.convert_null_to_space = convert_null_to_space
     if max_levels is not None:
         params.max_levels = max_levels;
     if max_level_name_length is not None:
         params.max_level_name_length = max_level_name_length
+    if six.PY2:
+        encoder = lambda x: x.encode("utf-8")
+    else:
+        encoder = lambda x: x
     if cat_names is not None:
         for name in cat_names:
+            name = encoder(name)
             loader.force_semantics(name, pti.CATEGORICAL)
     if num_names is not None:
         for name in num_names:
+            name = encoder(name)
             loader.force_semantics(name, pti.NUMERIC)
     if text_names is not None:
         for name in text_names:
+            name = encoder(name)
             loader.force_semantics(name, pti.TEXT)
-    loader.load(filename, params)
+    if in_encoding is not None and in_encoding not in ("utf-8", "unknown"):
+        raise ValueError("invalid encoding: " % in_encoding)
+    if out_encoding is not None and out_encoding not in ("utf-8", "unknown"):
+        raise ValueError("invalid encoding: " % out_encoding)
+    if in_encoding == "utf-8":
+        loader.set_in_encoding(pti.UNICODE_UTF8)
+    if out_encoding == "utf-8":
+        loader.set_out_encoding(pti.UNICODE_UTF8)
+    loader.load(_make_posix_filename(filename), params)
     return loader
 
 def internal_csv_loader_transfer(loader, forget=True, expand=False):
@@ -345,7 +388,15 @@ def load_csv_to_pandas(filename, *args, **kwargs):
         The contents of the CSV file as a Pandas DataFrame.
     """
     import pandas
-    return pandas.DataFrame.from_items(load_csv_to_expanded_columns(filename, *args, **kwargs))
+    expanded = load_csv_to_expanded_columns(filename, *args, **kwargs)
+    if os.path.getsize(filename) < 2 ** 10:  # cover the case of empty files have 0-element generators
+         expanded = list(expanded)
+         if len(expanded) > 0:
+              return pandas.DataFrame.from_items(expanded)
+         else:
+              return pandas.DataFrame()
+    else:
+         return pandas.DataFrame.from_items(expanded)
 
 @_docstring_parameter(_csv_load_params_doc)
 def baseline_average_columns(filename, type_check=False, *args, **kwargs):
@@ -373,10 +424,9 @@ def baseline_average_columns(filename, type_check=False, *args, **kwargs):
     """
     params = _get_params(*args, **kwargs)
     summer = pti.ParseAndSum();
-    summer.load(filename, params, type_check)
+    summer.load(_make_posix_filename(filename), params, type_check)
     d = {summer.get_column_name(i): summer.get_avg(i) for i in range(summer.get_num_columns())}
     return d
-
 
 @_docstring_parameter(_csv_load_params_doc)
 def baseline_newline_count(filename, *args, **kwargs):
@@ -396,7 +446,7 @@ def baseline_newline_count(filename, *args, **kwargs):
     """
     params = _get_params(*args, **kwargs)
     nc = pti.NewlineCounter();
-    count = nc.load(filename, params)
+    count = nc.load(_make_posix_filename(filename), params)
     return count
 
 @_docstring_parameter(_csv_load_params_doc)
@@ -413,25 +463,5 @@ def baseline_disk_to_mem(filename, *args, **kwargs):
     """
     params = _get_params(*args, **kwargs)
     mc = pti.MemCopyBaseline();
-    count = mc.load(filename, params)
+    count = mc.load(_make_posix_filename(filename), params)
     return count
-
-def internal_compare(filename, *args, **kwargs):
-    """
-    Loads a Pandas DataFrame with pandas and paratext, and compares their contents.
-    """
-    import pandas
-    dfY = load_csv_to_pandas(filename, *args, **kwargs)
-    if kwargs.get("no_header"):
-        dfX = pandas.read_csv(filename, header=None, na_values=['?'], names=dfY.keys())
-    else:
-        dfX = pandas.read_csv(filename, na_values=['?'])
-    results = {}
-    for key in dfX.columns:
-        if dfX[key].dtype in (str, unicode, np.object):
-            nonnan_mask = (dfY[key] != 'nan') & (dfY[key] != '?')
-            results[key] = (dfX[key][nonnan_mask]!=dfY[key][nonnan_mask]).mean()
-        else:
-            nonnan_mask = ~np.isnan(dfX[key])
-            results[key] = abs(dfX[key][nonnan_mask]-dfY[key][nonnan_mask]).max()
-    return results
