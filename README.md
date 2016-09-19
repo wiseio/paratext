@@ -69,7 +69,7 @@ the `load_csv_to_pandas` function.
 df = paratext.load_csv_to_pandas("hepatitis.csv")
 ```
 
-Its output looks something like this:
+The data frame looks something like this:
 
 ```
 In [1]: print df.head()
@@ -121,7 +121,7 @@ levels (`None` if not categorical).
       print key, repr(dict_frame[key][0:5]), levels.get(key, None)
 ```
 
-The output looks something like this:
+This gives the following output:
 
 ```
 PROTIME array([ nan,  nan,  nan,  80.,  nan], dtype=float32) None
@@ -227,16 +227,83 @@ Most CSV loading functions in ParaText have the following parameters:
    * `block_size`: The number of bytes to read at a time in each worker
    thread. The default is unlimited.
 
+Escape Characters
+-----------------
+
+ParaText supports backslash escape characters:
+
+    * `\t': tab
+
+    * `\n': newline
+
+    * `\r': carriage return
+
+    * `\v': vertical tab
+
+    * `\0': null terminator (0x00)
+
+    * `\b': backspace
+
+    * '\xnn': an 8-bit character represented with a 2 digit hexidecimal number.
+
+    * '\unnnn': a Unicode code point represented as 4-digit hexidecimal number.
+
+    * '\Unnnnnnnn': a Unicode code point represented as 8-digit hexiecimal number.
+
+Writing CSV
+-----------
+
+ParaText does yet support parallel CSV writing. However, it bundles a CSV
+writer that can be used to write DataFrames with arbitrary string and byte
+buffer data in a lossless fashion.
+
+If a character in a Python `string`, `unicode`, or `bytes`
+object could be treated as non-data when parsed (e.g. a doublequote or
+escape character), it is escaped. Moreover, any character that is outside
+the desired encoding is also escaped. This enables, for example,
+the lossless writing of non-UTF-8 to a UTF-8 file.
+
+For example, to restrict the encoding to 7-bit printable ASCII, pass
+`out_encoding='printable_ascii'`
+
+```
+   import paratext.serial
+   df = pandas.DataFrame({"X": [b"\xff\\\n \" oh my!"]})
+   paratext.serial.save_frame("lossless.csv", df, allow_quoted_newlines=True, out_encoding='printable_ascii', dos=False)
+```
+
+This results in a file:
+
+```
+"X"
+"\xff\\
+ \" oh my!"
+```
+
+Instead, pass `out_encoding='utf-8'` to ``save_frame``.
+
+```
+   import paratext.serial
+   df = pandas.DataFrame({"X": [b"\xff\\\n \" oh my!"],"Y": ["\U0001F600"]})
+   paratext.serial.save_frame("lossless2.csv", df, allow_quoted_newlines=True, out_encoding='utf-8', dos=False)
+```
+
+Now, the file only escapes cells in the DataFrame with
+non-UTF8 data. All other UTF8 characters are preserved.
+```
+"X","Y"
+"\xff\\
+ \" oh my!","<U+1F600>"
+```
+
 Other Notes
 -----------
 
 ParaText is a work-in-progress. There are a few unimplemented features
 that may prevent it from working on all CSV files. We note them below.
 
-1. ParaText does not yet support escape characters or comments.
-
-2. There is no way to supply type hints (e.g. `uint64` or `float`) of a
+1. There is no way to supply type hints (e.g. `uint64` or `float`) of a
 column.  Only the interpretation of a column (numeric, categorical, or
 text) can be forced.
 
-3. DateTime support will be added in a future release.
+2. DateTime will be supported in a future release.

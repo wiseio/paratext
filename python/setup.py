@@ -45,7 +45,6 @@ init_py.write("""
 __all__ = ['paratext']
 
 from paratext.core import *
-from paratext.helpers import *
 
 import paratext_internal
 import warnings

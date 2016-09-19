@@ -36,6 +36,7 @@
 #include <unistd.h>
 #include <thread>
 #include <sstream>
+#include <vector>
 
 #include "quote_adjustment_worker.hpp"
 
@@ -104,29 +105,113 @@ namespace ParaText {
       Returns the (start, end) boundaries of a specific chunk. The ending
       index is always inclusive.
      */
-    std::pair<size_t, size_t> get_chunk(size_t index) const {
+    std::pair<long, long> get_chunk(size_t index) const {
       return std::make_pair(start_of_chunk_[index], end_of_chunk_[index]);
     }
 
   private:
+    std::pair<long, char> get_num_trailing_escapes(long start_of_chunk, long end_of_chunk) {
+      long num_trailing_escapes = 0;
+      long k = end_of_chunk;
+      char successor = 0;
+      if (end_of_chunk < lastpos_) {
+        in_.clear();
+        in_.seekg(end_of_chunk + 1, std::ios_base::beg);
+        in_.read(&successor, 1);
+      }
+
+      for (; k >= start_of_chunk; k--) {
+        in_.clear();
+        in_.seekg(k, std::ios_base::beg);
+        char buf;
+        in_.read(&buf, 1);
+        size_t nread = in_.gcount();
+        if (nread == 0 || buf != '\\') {
+          break;
+        }
+        num_trailing_escapes++;
+      }
+      return std::make_pair(num_trailing_escapes, successor);
+    }
+
     void compute_offsets(bool allow_quoted_newlines = true) {
-      const size_t chunk_size = (length_ - starting_offset_) / maximum_chunks_;
-      size_t start_of_chunk = starting_offset_;
+      const size_t chunk_size = std::max(2L, (long)((length_ - starting_offset_) / maximum_chunks_));
+      long start_of_chunk = starting_offset_;
 #ifdef PARALOAD_DEBUG
       std::cerr << "number of threads: " << maximum_chunks_ << std::endl;
       std::cerr << "length: " << length_ << std::endl;
 #endif
       for (size_t worker_id = 0; worker_id < maximum_chunks_; worker_id++) {
-        size_t end_of_chunk = std::min(lastpos_, start_of_chunk + chunk_size);
+        long end_of_chunk = std::min(lastpos_, start_of_chunk + (long)chunk_size);
+        if (end_of_chunk < start_of_chunk) {
+          start_of_chunk = lastpos_ + 1;
+          end_of_chunk = lastpos_ + 1;
+          start_of_chunk_.push_back(start_of_chunk);
+          end_of_chunk_.push_back(end_of_chunk);
+          break;
+        }
+#ifdef PARALOAD_DEBUG
+        std::cerr << "initial>>> start_of_chunk: " << start_of_chunk << " end_of_chunk: " << end_of_chunk << std::endl;
+#endif
         if (worker_id == maximum_chunks_ - 1) {
           end_of_chunk = lastpos_;
         }
+        long trailing_escapes;
+        char trailing_successor;
+        std::tie(trailing_escapes, trailing_successor) = get_num_trailing_escapes(start_of_chunk, end_of_chunk);
+        if (trailing_escapes % 2 == 1) {
+          long extra = 0;
+          switch (trailing_successor) {
+          case 'x': /* \xYY */
+            extra = 3;
+            break;
+          case 'u': /* \uXXXX */
+            extra = 5;
+            break;
+          case 'U': /* \UXXXXXXXX */
+            extra = 9;
+            break;
+          case 'n':
+          case '0':
+          case 'r':
+          case 'v':
+          case 't':
+          case 'b':
+          case '\\':
+          case '\"':
+          case '\'':
+          case '{':
+          case '}':
+          case ' ':
+          case ',':
+          case ')':
+          case '(':
+            extra = 1;
+            break;
+          default:
+            {
+              std::ostringstream ostr;
+              ostr << "invalid escape character: \\" << ostr;
+            }
+          }
+          if (end_of_chunk + extra > lastpos_) {
+            std::ostringstream ostr;
+            ostr << "file ends with a trailing escape sequence \\" << trailing_successor;
+            throw std::logic_error(ostr.str());
+          }
+          else {
+            end_of_chunk++;
 #ifdef PARALOAD_DEBUG
-        std::cout << "start_of_chunk: " << start_of_chunk << " end_of_chunk: " << end_of_chunk << std::endl;
+            std::cerr << "cover escape: " << end_of_chunk << std::endl;
 #endif
+          }
+        }
         start_of_chunk_.push_back(start_of_chunk);
         end_of_chunk_.push_back(end_of_chunk);
-        start_of_chunk = std::min(lastpos_, end_of_chunk + 1);
+        if (end_of_chunk >= lastpos_) {
+          break;
+        }
+        start_of_chunk = end_of_chunk + 1;
       }
       if (allow_quoted_newlines) {
         adjust_offsets_according_to_quoted_newlines();
@@ -134,19 +219,25 @@ namespace ParaText {
       else {
         adjust_offsets_according_to_unquoted_newlines();
       }
+      for (size_t chunk_id = 0; chunk_id < start_of_chunk_.size(); chunk_id++) {
+#ifdef PARALOAD_DEBUG
+        std::cerr << "final>>> start_of_chunk: " << start_of_chunk_[chunk_id] << " end_of_chunk: " << end_of_chunk_[chunk_id] << std::endl;
+#endif
+      }
     }
 
     void adjust_offsets_according_to_unquoted_newlines() {
       const size_t block_size = 512;
       char buf[block_size];
       for (size_t worker_id = 0; worker_id < start_of_chunk_.size(); worker_id++) {
-        if (start_of_chunk_[worker_id] == end_of_chunk_[worker_id]) {
+        if (start_of_chunk_[worker_id] < 0 || end_of_chunk_[worker_id] < 0) {
           continue;
         }
+        in_.clear();
         in_.seekg(end_of_chunk_[worker_id], std::ios_base::beg);
-        size_t new_end = end_of_chunk_[worker_id];
+        long new_end = end_of_chunk_[worker_id];
         bool new_end_found = false;
-        size_t current = new_end;
+        long current = new_end;
         while (in_ && !new_end_found) {
           in_.read(buf, block_size);
           size_t nread = in_.gcount();
@@ -156,19 +247,21 @@ namespace ParaText {
           for (size_t i = 0; i < nread; i++) {
             if (buf[i] == '\n') {
               new_end = current + i;
-              i++;
               new_end_found = true;
             break;
             }
           }
           current += nread;
         }
+        if (!new_end_found) {
+          new_end = lastpos_;
+        }
         end_of_chunk_[worker_id] = new_end;
         for (size_t other_worker_id = worker_id + 1; other_worker_id < start_of_chunk_.size(); other_worker_id++) {
-          if (start_of_chunk_[other_worker_id] < new_end && end_of_chunk_[other_worker_id] < new_end) {
-            start_of_chunk_[other_worker_id] = 0;
-            end_of_chunk_[other_worker_id] = 0;
-          } else if (start_of_chunk_[other_worker_id] < new_end) {
+          if (end_of_chunk_[other_worker_id] <= new_end || new_end == lastpos_) {
+            start_of_chunk_[other_worker_id] = -1;
+            end_of_chunk_[other_worker_id] = -1;
+          } else if (start_of_chunk_[other_worker_id] <= new_end) {            
             start_of_chunk_[other_worker_id] = new_end + 1;
             end_of_chunk_[other_worker_id] = std::max(end_of_chunk_[other_worker_id], new_end + 1);
           }
@@ -180,72 +273,114 @@ namespace ParaText {
       std::vector<std::thread> threads;
       std::vector<std::shared_ptr<QuoteNewlineAdjustmentWorker> > workers;
       std::exception_ptr thread_exception;
-      for (size_t worker_id = 0; worker_id < maximum_chunks_; worker_id++) {
+      for (size_t worker_id = 0; worker_id < start_of_chunk_.size(); worker_id++) {
         workers.push_back(std::make_shared<QuoteNewlineAdjustmentWorker>(start_of_chunk_[worker_id],
                                                                          end_of_chunk_[worker_id]));
         threads.emplace_back(&QuoteNewlineAdjustmentWorker::parse, workers.back(), filename_);
       }
-      for (size_t thread_id = 0; thread_id < maximum_chunks_; thread_id++) {
+      for (size_t thread_id = 0; thread_id < threads.size(); thread_id++) {
         threads[thread_id].join();
         if (!thread_exception) {
           thread_exception = workers[thread_id]->get_exception();
         }
       }
-      // We're now outside the parallel region.q
+      for (size_t chunk_id = 0; chunk_id < workers.size(); chunk_id++) {
+#ifdef PARALOAD_DEBUG
+        std::cerr << "quotes>>> wid=" << chunk_id << " start_of_chunk: " << start_of_chunk_[chunk_id] << " end_of_chunk: " << end_of_chunk_[chunk_id] << " num_quotes: " << workers[chunk_id]->get_num_quotes() << std::endl;
+#endif
+      }
+      // We're now outside the parallel region.
       if (thread_exception) {
         std::rethrow_exception(thread_exception);
       }
-      size_t quotes_so_far = 0;
-      size_t cur_wid = 0;
-      size_t next_wid = 1;
-      quotes_so_far += workers[cur_wid]->get_num_quotes();
-      while (cur_wid < workers.size()) {
-        //std::cerr << "," << cur_wid;
-        if (end_of_chunk_[cur_wid] == start_of_chunk_[cur_wid]) {
-          start_of_chunk_[cur_wid] = 0;
-          end_of_chunk_[cur_wid] = 0;
-          cur_wid++;
-          next_wid = cur_wid + 1;
-          continue;
+      std::vector<size_t> cumulative_quote_sum(workers.size(), 0);
+      if (workers.size() > 0) {
+        cumulative_quote_sum[0] = workers[0]->get_num_quotes();
+        for (size_t i = 1; i < workers.size(); i++) {
+        cumulative_quote_sum[i] = cumulative_quote_sum[i - 1] + workers[i]->get_num_quotes();
         }
-        if (quotes_so_far % 2 == 0) {
-          if (next_wid < workers.size()) {
+      }
+#ifdef PARALOAD_DEBUG
+      std::cerr << "total unescaped quotes: " << cumulative_quote_sum.back() << std::endl;
+#endif
+      size_t current = 0;
+      size_t next = 1;
+      while (current < workers.size()) {
+        if (end_of_chunk_[current] < 0 || start_of_chunk_[current] < 0) {
+          start_of_chunk_[current] = -1;
+          end_of_chunk_[current] = -1;
+#ifdef PARALOAD_DEBUG
+          std::cerr << "negative chunk current=" << current << std::endl;
+#endif
+          current++;
+          /*          if (next_wid < workers.size()) {
             quotes_so_far += workers[next_wid]->get_num_quotes();
-            if (workers[next_wid]->get_first_unquoted_newline() >= 0) {
-              end_of_chunk_[cur_wid] = workers[next_wid]->get_first_unquoted_newline();
-              start_of_chunk_[next_wid] = std::min(end_of_chunk_[next_wid], end_of_chunk_[cur_wid] + 1);
-              cur_wid = next_wid;
-            }
-            else {
-              end_of_chunk_[cur_wid] = end_of_chunk_[next_wid];
-              start_of_chunk_[next_wid] = 0;
-              end_of_chunk_[next_wid] = 0;
-            }
             next_wid++;
           }
-          else {
-            end_of_chunk_[cur_wid] = lastpos_;
+          continue;*/
+        }
+        else if (cumulative_quote_sum[next-1] % 2 == 0) { /* even number of quotes so far. */
+          if (next < workers.size()) {
+#ifdef PARALOAD_DEBUG
+            std::cerr << "[A] current=" << current << " next=" << next << " quotes_so_far=" << cumulative_quote_sum[current] << std::endl;
+#endif
+            long pos = workers[next]->get_first_unquoted_newline();
+            if (pos >= 0) { /* resolved */
+              end_of_chunk_[current] = pos;
+              if (end_of_chunk_[next] == pos) { /* take all of next chunk. */
+                start_of_chunk_[next] = -1;
+                end_of_chunk_[next] = -1;
+                current = next + 1;
+                next += 2;
+              }
+              else {  /* take part of next chunk. */
+                start_of_chunk_[next] = pos + 1;
+                current = next;
+                next++;
+              }
+            }
+            else { /* no resolution. do not increment current */
+              end_of_chunk_[current] = end_of_chunk_[next];
+              start_of_chunk_[next] = -1;
+              end_of_chunk_[next] = -1;
+              next++;
+            }
+          }
+          else { /* EOF resolution. */
+            end_of_chunk_[current] = lastpos_;
             break;
           }
         }
-        else {
-          if (next_wid < workers.size()) {
-            quotes_so_far += workers[next_wid]->get_num_quotes();
-            if (workers[next_wid]->get_first_quoted_newline() >= 0) {
-              end_of_chunk_[cur_wid] = workers[next_wid]->get_first_quoted_newline();
-              start_of_chunk_[next_wid] = std::min(end_of_chunk_[next_wid], end_of_chunk_[cur_wid] + 1);
-              cur_wid = next_wid;
+        else { /* odd number of quotes so far. */
+          if (next < workers.size()) {
+#ifdef PARALOAD_DEBUG
+            std::cerr << "[B] current=" << current << " next=" << next << " quotes_so_far=" << cumulative_quote_sum[next] << std::endl;
+#endif
+            long pos = workers[next]->get_first_quoted_newline();
+            if (pos >= 0) { /* resolution*/
+              end_of_chunk_[current] = pos;
+              if (end_of_chunk_[next] == pos) { /*take all of next chunk. */
+                start_of_chunk_[next] = -1;
+                end_of_chunk_[next] = -1;
+                current = next + 1;
+                next += 2;
+              }
+              else { /* take part of next chunk. */
+                start_of_chunk_[next] = pos + 1;
+                current = next;
+                next++;
+              }
             }
-            else {
-              end_of_chunk_[cur_wid] = end_of_chunk_[next_wid];
-              start_of_chunk_[next_wid] = 0;
-              end_of_chunk_[next_wid] = 0;
+            else { /*no resolution. take all of chunk. */
+              end_of_chunk_[current] = end_of_chunk_[next];
+              start_of_chunk_[next] = -1;
+              end_of_chunk_[next] = -1;
+              next++;
             }
-            next_wid++;
           }
-          else {
+          else { /* no resolution and EOF. */
             std::ostringstream ostr;
-            ostr << "The file ends with an open quote (" << quotes_so_far << ")";
+            ostr << "The file ends with an open quote; a total of " << cumulative_quote_sum[current] << ")";
             throw std::logic_error(ostr.str());
           }
         }
@@ -257,10 +392,10 @@ namespace ParaText {
     std::string filename_;
     size_t maximum_chunks_;
     size_t length_;
-    size_t lastpos_;
-    size_t starting_offset_;
-    std::vector<size_t> start_of_chunk_;
-    std::vector<size_t> end_of_chunk_;
+    long lastpos_;
+    long starting_offset_;
+    std::vector<long> start_of_chunk_;
+    std::vector<long> end_of_chunk_;
   };
 }
 #endif

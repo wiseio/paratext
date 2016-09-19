@@ -1,4 +1,8 @@
 /*
+
+    ParaText: parallel text reading
+    Copyright (C) 2016. wise.io, Inc.
+
    Licensed to the Apache Software Foundation (ASF) under one
    or more contributor license agreements.  See the NOTICE file
    distributed with this work for additional information
@@ -15,23 +19,26 @@
    KIND, either express or implied.  See the License for the
    specific language governing permissions and limitations
    under the License.
+ */
 
-   Copyright (C) wise.io, Inc. 2016.
-*/
-#ifndef PARATEXT_PARACSV_HPP
-#define PARATEXT_PARACSV_HPP
+/*
+  Coder: Damian Eads.
+ */
 
-#include "generic/parse_params.hpp"
+#ifndef PARATEXT_ENCODING_HPP
+#define PARATEXT_ENCODING_HPP
 
-size_t get_num_cores();
+namespace ParaText {
+  typedef enum {UNKNOWN_BYTES, UNICODE_UTF8, ASCII} Encoding;
 
-std::string as_quoted_string(const std::string &s, bool do_not_escape_newlines = false);
+  struct as_raw_bytes {
+    std::string val;
+  };
+  
+  struct as_utf8 {
+    std::string val;
+  };
 
-ParaText::as_raw_bytes get_random_string(size_t length, long seed, long min = 0, long max = 255);
-ParaText::as_utf8 get_random_string_utf8(size_t num_sequences, long seed, bool include_null = true);
-
-size_t get_string_length(const std::string &s);
-
-bool are_strings_equal(const std::string &x, const std::string &y);
+}
 
 #endif
