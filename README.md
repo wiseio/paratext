@@ -1,6 +1,9 @@
 ParaText
 ========
 
+<a href="https://travis-ci.org/wiseio/paratext.svg?branch=master"><img src="https://travis-ci.org/wiseio/paratext.svg?branch=master" qlt="Paratext Travis Status"></a>
+<a href="https://github.com/wiseio/paratext/blob/master/README.md"><img src="https://img.shields.io/github/license/wiseio/paratext.svg" qlt="Paratext License"></a>
+
 ParaText is a C++ library to read text files in parallel on multi-core
 machines. The alpha release includes a CSV reader and Python bindings.
 The library itself has no dependencies other than the standard library.
