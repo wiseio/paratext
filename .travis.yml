@@ -23,7 +23,6 @@ before_install:
   - date
   - pwd
   - uname -a
-  - cat /etc/issue
   - python -V
   - which g++
   - g++ --version
