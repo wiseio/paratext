@@ -362,7 +362,7 @@ def load_csv_as_iterator(filename, expand=True, forget=True, *args, **kwargs):
 
      This function is very aggressive about freeing memory. After each
      value is generated, the corresponding scratch space in the parser
-     and worker threads is deallocated.     
+     and worker threads is deallocated.
      """
      if expand:
           return load_csv_to_expanded_columns(filename, *args, **kwargs)
