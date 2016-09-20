@@ -41,6 +41,7 @@ install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
+  - conda install python=$PY_VERSION nose
   # Replace dep1 dep2 ... with your dependencies
   - conda create -q -n test-environment python=$PY_VERSION swig=3.0.8 pandas numpy
   - source activate test-environment
