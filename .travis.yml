@@ -8,6 +8,13 @@ os:
   - linux
   - osx
 
+addons:
+  apt:
+    sources:
+    - ppa:ubuntu-toolchain-r/test
+    packages:
+    - g++-4.8
+
 before_install:
   - echo "before_install"
   - echo $VIRTUAL_ENV
