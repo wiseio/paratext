@@ -33,6 +33,8 @@
 #include <fstream>
 #include <unordered_set>
 
+#include "util/strings.hpp"
+
 namespace ParaText {
 
 namespace CSV {
@@ -84,7 +86,11 @@ namespace CSV {
      */
     void add_column_name(const std::string &name) {
       //std::cerr << "col " << column_names_.size() << ": " << name << std::endl;
-      column_names_.push_back(name);
+
+      std::string transformed_name;
+      parse_unquoted_string(name.begin(), name.end(), std::back_inserter(transformed_name));
+      convert_null_to_space(transformed_name.begin(), transformed_name.end());
+      column_names_.push_back(transformed_name);
     }
     
     /*
@@ -101,14 +107,17 @@ namespace CSV {
       std::string token;
       size_t current = 0;
       size_t block_size = 4096;
+      size_t escape_jump = 0;
 #ifndef _WIN32
       char buf[block_size];
 #else
       char *buf = (char *)_malloca(block_size);
 #endif
       char quote_started = 0;
+      bool eoh_encountered = false;
+      bool soh_encountered = false;
       in_.seekg(0, std::ios_base::beg);
-      while (current < length_) {
+      while (current < length_ && !eoh_encountered) {
         if (current % block_size == 0) { /* The block is aligned. */
           in_.read(buf, std::min(length_ - current, block_size));
         }
@@ -117,50 +126,71 @@ namespace CSV {
         }
         size_t nread = in_.gcount();
         size_t i = 0;
-        if (quote_started) {
-          for (; i < nread; i++) {
-            if (buf[i] == quote_started) {
-              quote_started = 0;
-              break;
-            }
-            token.push_back(buf[i]);
+        /* ignore leading whitespace in the file. */
+        while (i < nread && !soh_encountered) {
+          if (isspace(buf[i])) {
+            i++; /* eat the whitespace. */
+          } else {
+            soh_encountered = true;
+            /* do not do i++. we need to process it like non-whitespace */
           }
         }
-        for (; i < nread; i++) {
-          switch (buf[i]) {
-          case '\'':
-          case '\"':
-            {
-              quote_started = buf[i];
-              i++;
-              for (; i < nread; i++) {
-                if (buf[i] == quote_started) {
-                  quote_started = false;
-                  break;
-                }
+        while (i < nread && !eoh_encountered) {
+          if (quote_started) {
+            for (; i < nread; i++) {
+              if (escape_jump > 0) {
+                escape_jump--;
+              }
+              else if (buf[i] == '\\') {
+                escape_jump = 1;
+              }
+              else if (buf[i] == quote_started) {
+                i++;
+                quote_started = 0;
+                break;
+              }
+              token.push_back(buf[i]);
+            }
+          }
+          else {
+            for (; i < nread; i++) {
+              if (escape_jump > 0) {
+                token.push_back(buf[i]);
+                escape_jump--;
+              }
+              else if (buf[i] == '\\') {
+                token.push_back(buf[i]);
+                escape_jump = 1;
+              }
+              else if (buf[i] == '\"' || buf[i] == '\'') {
+                quote_started = buf[i];
+                i++;
+                break;
+              }
+              else if (buf[i] == ',') {
+                add_column_name(token);
+                token.clear();
+              }              
+              else if (buf[i] == '\r') { /* do nothing: dos wastes a byte each line. */ }
+              else if (buf[i] == '\n') {
+                add_column_name(token);
+                token.clear();
+                end_of_header_ = current + i;
+                eoh_encountered = true;
+                i++;
+                break;
+              }
+              else {
                 token.push_back(buf[i]);
               }
             }
-            //std::cout << token << std::endl;
-            break;
-          case ',':
-            add_column_name(token);
-            token.clear();
-            break;
-          case '\n':
-            add_column_name(token);
-            token.clear();
-            end_of_header_ = current + i;
-            goto header_finished;
-            break;
-          default:
-            token.push_back(buf[i]);
-            break;
           }
         }
         current += nread;
       }
-    header_finished:
+      if (!soh_encountered) { /* If this is just a file of whitespace, then the end of header is the last pos in the file. */
+        end_of_header_ = current;
+      }
       std::unordered_set<std::string> cnset;
       for (auto &cname : column_names_) {
         cnset.insert(cname);

@@ -28,6 +28,13 @@
 #ifndef WISEIO_STRINGS_HPP
 #define WISEIO_STRINGS_HPP
 
+#include <string>
+#include <memory>
+#include <sstream>
+#include <limits>
+#include <random>
+#include "unicode.hpp"
+
   template <class T>
   struct content_hash {};
 
@@ -61,6 +68,382 @@
       return *X == *Y;
     }
   };
+
+  inline long get_decimal_from_ascii_hex(char x) {
+    //char y = tolower(x);
+    return (x >> 6) * 9 + (0x0F & x);
+  }
+
+  /*
+    Converts a unicode character encoded in UCS-2 to
+    UTF-8. If successful, one or more characters are
+    added to the output iterator.
+
+    If successful, this function returns 0, otherwise
+    1 is returned if the UCS-2 character is invalid.
+  */
+  template <class OutputIterator>
+  int ucs2_to_utf8 (int ucs2, OutputIterator out)
+  {
+    if (ucs2 < 0x80) {
+      *(out++) = ucs2;
+      return 0;
+    }
+    if (ucs2 >= 0x80  && ucs2 < 0x800) {
+      *(out++) = (ucs2 >> 6)   | 0xC0;
+      *(out++) = (ucs2 & 0x3F) | 0x80;
+      return 0;
+    }
+    if (ucs2 >= 0x800 && ucs2 < 0xFFFF) {
+      if (ucs2 >= 0xD800 && ucs2 <= 0xDFFF) {
+	/* Ill-formed. */
+	return 1;
+      }
+      *(out++) = ((ucs2 >> 12)       ) | 0xE0;
+      *(out++) = ((ucs2 >> 6 ) & 0x3F) | 0x80;
+      *(out++) = ((ucs2      ) & 0x3F) | 0x80;
+      return 0;
+    }
+    if (ucs2 >= 0x10000 && ucs2 < 0x10FFFF) {
+      /* http://tidy.sourceforge.net/cgi-bin/lxr/source/src/utf8.c#L380 */
+      *(out++) = 0xF0 | (ucs2 >> 18);
+      *(out++) = 0x80 | ((ucs2 >> 12) & 0x3F);
+      *(out++) = 0x80 | ((ucs2 >> 6) & 0x3F);
+      *(out++) = 0x80 | ((ucs2 & 0x3F));
+      return 0;
+    }
+    return 1;
+  }
+
+  /*
+    Takes a UTF-8 sequence and returns a string that's double quoted if it is required to parse
+    it as a contiguous entity that is not-altered (e.g. space-delimited strings).
+
+    Non-space whitespace characters will be backslash-escaped with \n, \t, \v, \r, \b, \f.
+
+    If ``mandatory_quoting`` is true, the string will automatically be double quoted.
+   */
+  template <class Iterator>
+  inline std::string get_quoted_string(Iterator begin, Iterator end, bool mandatory_quoting = false, bool do_not_escape_newline = false) {
+    std::ostringstream ostr;
+    bool contains_single_quote = false;
+    bool contains_white_space = false;
+    bool contains_double_quote = false;
+    bool contains_comment_char = false;
+    bool contains_terminator = false;
+    bool contains_special = false;
+    if (begin == end) {
+      return "\"\"";
+    }
+    if (!mandatory_quoting) {
+      for (Iterator it = begin; it != end; it++) {
+	char c = *it;
+	if (std::isspace(c)) {
+	  contains_white_space = true;
+	}
+    else if (c < 32 || c >= 127) {
+      contains_special = true;
+    }
+    else {
+	switch (c) {
+    case ',':
+    case '}':
+    case '{':
+    case '\\':
+      contains_special = true;
+      break;
+	case '\'':
+	  contains_single_quote = true;
+	  break;
+	case '\"':
+	  contains_double_quote = true;
+	  break;
+	case '%':
+	  contains_comment_char = true;
+	  break;
+	case '\0':
+	  contains_terminator = true;
+	  break;
+	default:
+	  break;
+	}
+    }
+      }
+    }
+    if (contains_special || contains_white_space || contains_single_quote || contains_double_quote || contains_comment_char || contains_terminator || mandatory_quoting) {
+      ostr << '"';
+      for (Iterator it = begin; it != end; it++) {
+	switch (*it) {
+	case '"':
+	  ostr << '\\' << '"';
+	  break;
+	case '\\':
+	  ostr << '\\' << '\\';
+	  break;
+	case '\n':
+      if (do_not_escape_newline) {
+        ostr << '\n';
+      } else {
+        ostr << '\\' << 'n';
+      }
+	  break;
+	case '\t':
+	  ostr << '\\' << 't';
+	  break;
+	case '\r':
+	  ostr << '\\' << 'r';
+	  break;
+	case '\f':
+	  ostr << '\\' << 'f';
+	  break;
+	case '\b':
+	  ostr << '\\' << 'b';
+	  break;
+	case '\v':
+	  ostr << '\\' << 'v';
+	  break;
+	default:
+	  ostr << *it;
+	  break;
+	}
+      }
+      ostr << '"';
+      return ostr.str();
+    }
+    else {
+      return std::string(begin, end);
+    }
+  }
+
+  /*
+    Takes in a valid UTF-8 sequence defined by two iterators `begin` and `end`
+    where *begin is some quote character (e.g. '\"'). It returns an iterator
+    pointing to the ending unprocessed character (one after the quote
+    character).
+   */
+  template <class Iterator, class OutputIterator>
+  inline Iterator parse_quoted_string(Iterator begin, Iterator end, OutputIterator out, const char quote_char) {
+    if (begin == end) {
+      return end;
+    }
+    if (*begin == quote_char) {
+      begin++;
+      while (begin != end) {
+	if (*begin == quote_char) {
+	  begin++;
+	  break;
+	}
+	else if (*begin == '\\') { // process escape characters
+	  if ((begin + 1) != end) {
+	    begin++;
+	    switch (*begin) {
+	    case 'n':
+	      *(out++) = '\n';
+	      break;
+	    case 't':
+	      *(out++) = '\t';
+	      break;
+	    case 'r':
+	      *(out++) = '\r';
+	      break;
+	    case 'b':
+	      *(out++) = '\b';
+	      break;
+	    case 'f':
+	      *(out++) = '\f';
+	      break;
+	    case 'x':
+	      {
+		int sumv = 0;
+		for (int i = 0; i < 2; i++) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
+		    begin++;
+		    int digit = *begin;
+            sumv = sumv * 16 + get_decimal_from_ascii_hex(digit);
+		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "literal \\xYY takes 2 hex digits, " << (i+1) << " given.";
+            throw std::logic_error(ostr.str());
+          }
+		}
+		*(out++) = (unsigned char)sumv;
+	      }
+	      break;
+	    case 'u':
+	      {
+		long sumv = 0;
+		for (int i = 0; i < 4; i++) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
+		    begin++;
+		    int digit = get_decimal_from_ascii_hex(*begin);
+            sumv = sumv * 16 + digit;
+		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "unicode literal \\uyyyy takes 4 hex digits for codepoint.";
+            throw std::logic_error(ostr.str());
+          }
+		}
+        WiseIO::convert_utf32_to_utf8(&sumv, &sumv + 1, out);
+	      }
+	      break;
+	    case 'U':
+	      {
+		long sumv = 0;
+		for (int i = 0; i < 8; i++) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
+		    begin++;
+		    int digit = get_decimal_from_ascii_hex(*begin);
+            sumv = sumv * 16 + digit;
+		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "unicode literal \\Uyyyyyyyy takes 8 hex digits for codepoint.";
+            throw std::logic_error(ostr.str());
+          }
+		}
+        WiseIO::convert_utf32_to_utf8(&sumv, &sumv + 1, out);
+	      }
+	      break;
+	    case '0':
+	      *(out++) = '\0';
+	      break;
+	    default:
+	      *(out++) = *begin;
+	      break;
+	    }
+	  }
+	}
+	else {
+	  *(out++) = *begin;
+	}
+	begin++;
+      }
+    }
+    return begin;
+  }
+
+  /*
+    Takes in a valid UTF-8 sequence defined by two iterators `begin` and `end`
+    where *begin is some quote character (e.g. '\"'). It returns an iterator
+    pointing to the ending unprocessed character (one after the quote
+    character).
+
+    Null-terminator escape sequences \0 are translated into spaces for
+    security reasons.
+   */
+  template <class Iterator, class OutputIterator>
+  inline Iterator parse_unquoted_string(Iterator begin, Iterator end, OutputIterator out) {
+    if (begin == end) {
+      return end;
+    }
+      while (begin != end) {
+
+	if (*begin == '\\') { // process escape characters
+	  if ((begin + 1) != end) {
+	    begin++;
+	    switch (*begin) {
+	    case 'n':
+	      *(out++) = '\n';
+	      break;
+	    case 't':
+	      *(out++) = '\t';
+	      break;
+	    case 'r':
+	      *(out++) = '\r';
+	      break;
+	    case 'b':
+	      *(out++) = '\b';
+	      break;
+	    case 'f':
+	      *(out++) = '\f';
+	      break;
+	    case 'v':
+	      *(out++) = '\v';
+	      break;
+	    case 'e':
+	      *(out++) = '\\';
+	      break;
+	    case 'x':
+	      {
+		int sumv = 0;
+		for (int i = 0; i < 2; i++) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
+		    begin++;
+		    int digit = *begin;
+            sumv = sumv * 16 + get_decimal_from_ascii_hex(digit);
+		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "hex literal \\xYY takes 2 hex digits.";
+            throw std::logic_error(ostr.str());
+          }
+		}
+		*(out++) = (unsigned char)sumv;
+	      }
+	      break;
+	    case 'u':
+	      {
+		long sumv = 0;
+		for (int i = 0; i < 4; i++) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
+		    begin++;
+		    int digit = get_decimal_from_ascii_hex(*begin);
+            sumv = sumv * 16 + digit;
+		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "unicode literal \\uyyyy takes 4 hex digits for codepoint.";
+            throw std::logic_error(ostr.str());
+          }
+		}
+        WiseIO::convert_utf32_to_utf8(&sumv, &sumv + 1, out);
+	      }
+	      break;
+	    case 'U':
+	      {
+		long sumv = 0;
+		for (int i = 0; i < 8; i++) {
+		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
+		    begin++;
+		    int digit = get_decimal_from_ascii_hex(*begin);
+            sumv = sumv * 16 + digit;
+		  }
+          else {
+            std::ostringstream ostr;
+            ostr << "unicode literal \\Uyyyyyyyy takes 8 hex digits for codepoint.";
+            throw std::logic_error(ostr.str());
+          }
+		}
+        WiseIO::convert_utf32_to_utf8(&sumv, &sumv + 1, out);
+	      }
+	      break;
+	    case '0':
+	      *(out++) = '\0';
+	      break;
+	    default:
+	      *(out++) = *begin;
+	      break;
+	    }
+	  }
+	}
+	else {
+	  *(out++) = *begin;
+	}
+	begin++;
+      }
+    return begin;
+  }
+
+  template <class Iterator>
+  void convert_null_to_space(Iterator begin, Iterator end) {
+    for (Iterator it = begin; it != end; it++) {
+      if (*it == '\0') {
+        *it = ' ';
+      }
+    }
+  }
 
   /*
     Returns an iterator to the first non-whitespace character, or if
@@ -274,5 +657,13 @@
 done:
         return sign ? -fraction : fraction;
 }
+
+  inline std::string get_quoted_string(const std::string &s) {
+    return get_quoted_string(s.begin(), s.end(), false, false);
+  }
+
+  inline std::string get_mandatory_quoted_string(const std::string &s) {
+    return get_quoted_string(s.begin(), s.end(), true, false);
+  }
 
 #endif

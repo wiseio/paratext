@@ -120,10 +120,9 @@ private:
       std::exception_ptr thread_exception;
       chunker_.process(filename, 0, params.num_threads, params.allow_quoted_newlines);
       for (size_t worker_id = 0; worker_id < chunker_.num_chunks(); worker_id++) {
-        size_t start_of_chunk = 0, end_of_chunk = 0;
+        long start_of_chunk = 0, end_of_chunk = 0;
         std::tie(start_of_chunk, end_of_chunk) = chunker_.get_chunk(worker_id);
-        
-        if (start_of_chunk == end_of_chunk) {
+        if (start_of_chunk < 0 || end_of_chunk < 0) {
           continue;
         }
         workers.push_back(std::make_shared<NewlineCountWorker>(start_of_chunk, end_of_chunk, params.block_size));
