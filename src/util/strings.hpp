@@ -33,6 +33,7 @@
 #include <sstream>
 #include <limits>
 #include <random>
+#include <locale>
 #include "unicode.hpp"
 
   template <class T>
@@ -138,7 +139,8 @@
     if (!mandatory_quoting) {
       for (Iterator it = begin; it != end; it++) {
 	char c = *it;
-	if (std::isspace(c)) {
+	const std::locale loc("");
+	if (std::isspace(c, loc)) {
 	  contains_white_space = true;
 	}
     else if (c < 32 || c >= 127) {

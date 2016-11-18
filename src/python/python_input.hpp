@@ -11,6 +11,7 @@
 #include <numpy/arrayobject.h>
 #include <numpy/npy_math.h>
 #include <stdio.h>
+#include <iterator>
 
 #include "processor.hpp"
 #include "util/unicode.hpp"

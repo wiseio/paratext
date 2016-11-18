@@ -29,6 +29,7 @@ Loads text files using multiple cores.
 import paratext_internal as pti
 
 import os
+import ntpath
 import six
 from six.moves import range
 from six.moves.urllib_parse import urlparse
@@ -116,14 +117,17 @@ def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, nu
     return params
 
 def _make_posix_filename(fn_or_uri):
-     parse_result = urlparse(fn_or_uri)
-     if parse_result.scheme in ('', 'file'):
-          result = parse_result.path
+     if ntpath.splitdrive(fn_or_uri)[0] or ntpath.splitunc(fn_or_uri)[0]:
+         result = fn_or_uri
      else:
-          raise ValueError("unsupported protocol '%s'" % fn_or_uri)
+         parse_result = urlparse(fn_or_uri)
+         if parse_result.scheme in ('', 'file'):
+              result = parse_result.path
+         else:
+              raise ValueError("unsupported protocol '%s'" % fn_or_uri)
      if six.PY2 and isinstance(result, unicode):
-          # SWIG needs UTF-8
-          result = result.encode("utf-8")
+       # SWIG needs UTF-8
+       result = result.encode("utf-8")
      return result
 
 @_docstring_parameter(_csv_load_params_doc)
