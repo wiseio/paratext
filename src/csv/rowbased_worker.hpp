@@ -47,7 +47,7 @@ public:
 
   void parse(const std::string &filename) {
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     const size_t block_size = block_size_;
     char buf[block_size];
     in.seekg(chunk_start_, std::ios_base::beg);

@@ -73,7 +73,7 @@ public:
 
   void parse_impl(const std::string &filename) {
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     const size_t block_size = block_size_;
 #ifndef _WIN32
       char buf[block_size];

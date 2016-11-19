@@ -65,7 +65,7 @@ namespace CSV {
         throw std::logic_error(ostr.str());
       }
       length_ = fs.st_size;
-      in_.open(filename);
+      in_.open(filename, std::ios::binary);
       if (!in_) {
         std::ostringstream ostr;
         ostr << "cannot open file '" << filename << "'";

@@ -80,7 +80,7 @@ public:
     (void)data_begin;
     (void)file_end;
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     column_index_ = 0;
     quote_started_ = '\0';
     escape_jump_ = 0;

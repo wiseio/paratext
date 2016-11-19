@@ -87,7 +87,7 @@ namespace ParaText {
       else {
         lastpos_ = 0;
       }
-      in_.open(filename.c_str());
+      in_.open(filename.c_str(), std::ios::binary);
       if (!in_) {
         std::ostringstream ostr;
         ostr << "cannot open file '" << filename << "'";
