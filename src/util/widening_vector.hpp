@@ -208,8 +208,8 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
   virtual widening_vector_impl_base *v_push_back(long long value) {
     widening_vector_impl_base *retval = this;
     //std::cout << "i";
-    if (value >= (long)std::numeric_limits<Head>::min()
-        && value <= (long)std::numeric_limits<Head>::max()) {
+    if (value >= (long long)std::numeric_limits<Head>::lowest()
+        && value <= (long long)std::numeric_limits<Head>::max()) {
       values_.push_back(value);
     }
     else {
@@ -222,8 +222,9 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
   template <class THead>
   typename std::enable_if<std::is_floating_point<THead>::value, widening_vector_impl_base *>::type v_push_back_impl(float value) {
     widening_vector_impl_base *retval = this;
-    if (value >= std::numeric_limits<THead>::min()
-        && value <= std::numeric_limits<THead>::max()) {
+    if (!std::isfinite(value) ||
+        (value >= std::numeric_limits<THead>::lowest()
+         && value <= std::numeric_limits<THead>::max())) {
       values_.push_back(value);
     }
     else {
@@ -237,7 +238,7 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
   typename std::enable_if<!std::is_floating_point<THead>::value, widening_vector_impl_base *>::type v_push_back_impl(float value) {
     widening_vector_impl_base *retval = this;
     if (std::trunc(value) == value
-        && value >= (float)std::numeric_limits<Head>::min()
+        && value >= (float)std::numeric_limits<Head>::lowest()
         && value <= (float)std::numeric_limits<Head>::max()) {
       values_.push_back(value);
     }
