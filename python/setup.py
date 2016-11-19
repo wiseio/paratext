@@ -71,7 +71,7 @@ swig_cmd = ["swig", "-c++", "-python"]
 if sys.version_info >= (3,):
     swig_cmd += ["-py3"]
 
-swig_cmd += ["-I../src/", "-outdir", "./", "../src/paratext_internal.i"]
+swig_cmd += ["-I" + os.path.join("..", "src"), "-outdir", ".", os.path.join("..", "src", "paratext_internal.i")]
 
 print("running swig: ", swig_cmd)
 p = subprocess.Popen(swig_cmd)
@@ -88,10 +88,11 @@ See README
 """,
       keywords=['csv', 'reading'],
       ext_modules=[Extension('_paratext_internal',
-                             ['../src/paratext_internal_wrap.cxx', '../src/paratext_internal.cpp'],
+                             [os.path.join('..', 'src', 'paratext_internal_wrap.cxx'),
+                              os.path.join('..', 'src', 'paratext_internal.cpp')],
                              extra_link_args = extra_link_args,
                              extra_compile_args = extra_compile_args,
-                             include_dirs=['../src/'],
+                             include_dirs=[os.path.join('..', 'src')],
                              libraries = extra_libraries),
                    ],
       py_modules=["paratext_internal"],
