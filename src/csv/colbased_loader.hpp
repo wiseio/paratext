@@ -544,7 +544,7 @@ namespace ParaText {
       size_t num_threads = chunker_.num_chunks();
       column_chunks_.clear();
       for (size_t worker_id = 0; worker_id < num_threads; worker_id++) {
-        long start_of_chunk = 0, end_of_chunk = 0;
+        long long start_of_chunk = 0, end_of_chunk = 0;
         std::tie(start_of_chunk, end_of_chunk) = chunker_.get_chunk(worker_id);
         
         /* If the chunk was eliminated because its entirety represents quoted

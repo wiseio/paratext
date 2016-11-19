@@ -121,12 +121,12 @@ struct widening_vector_impl_base {
   virtual ~widening_vector_impl_base() {}
 
   virtual widening_vector_impl_base *v_push_back(float f) = 0;
-  virtual widening_vector_impl_base *v_push_back(long f) = 0;
+  virtual widening_vector_impl_base *v_push_back(long long f) = 0;
 
   virtual void v_shrink_to_fit() = 0;
   virtual size_t v_size() const = 0;
   virtual float v_get_float(size_t i) const = 0;
-  virtual long v_get_long(size_t i) const = 0;
+  virtual long long v_get_long(size_t i) const = 0;
   virtual void v_clear() = 0;
   virtual std::type_index v_get_type_index() const = 0;
   virtual std::type_index v_get_common_type_index(std::type_index idx) const = 0;
@@ -150,7 +150,7 @@ struct widening_vector_impl_base {
   virtual double get_sum_impl(double) const = 0;
   virtual float get_sum_impl(float) const = 0;
   virtual size_t get_sum_impl(size_t) const = 0;
-  virtual long get_sum_impl(long) const = 0;
+  virtual long long get_sum_impl(long long) const = 0;
 };
 
 template <class WVT>
@@ -172,7 +172,7 @@ struct widening_vector_impl_crtp : public widening_vector_impl_base {
   virtual double get_sum_impl(double) const { return ((WVT*)this)->template get_sum<double>(); }
   virtual float get_sum_impl(float) const { return ((WVT*)this)->template get_sum<float>(); }
   virtual size_t get_sum_impl(size_t) const { return ((WVT*)this)->template get_sum<size_t>(); }
-  virtual long get_sum_impl(long) const { return ((WVT*)this)->template get_sum<long>(); }
+  virtual long long get_sum_impl(long long) const { return ((WVT*)this)->template get_sum<long long>(); }
 };
 
 /*
@@ -205,7 +205,7 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
     return v_push_back_impl<Head>(value);
   }
 
-  virtual widening_vector_impl_base *v_push_back(long value) {
+  virtual widening_vector_impl_base *v_push_back(long long value) {
     widening_vector_impl_base *retval = this;
     //std::cout << "i";
     if (value >= (long)std::numeric_limits<Head>::min()
@@ -286,8 +286,8 @@ struct widening_vector_impl<I, Head, Ts...> : public widening_vector_impl_crtp<w
     return (float)values_[i];
   }
 
-  virtual long v_get_long(size_t i) const {
-    return (long)values_[i];
+  virtual long long v_get_long(size_t i) const {
+    return (long long)values_[i];
   }
 
   virtual std::type_index v_get_common_type_index(std::type_index idx) const {
@@ -321,7 +321,7 @@ private:
   template <class THead>
   typename std::enable_if<std::is_integral<THead>::value, void>::type move_to_wider_impl() {
     for (size_t i = 0; i < values_.size(); i++) {
-      wider_.v_push_back((long)values_[i]);
+      wider_.v_push_back((long long)values_[i]);
     }
     values_.clear();
     values_.shrink_to_fit();
@@ -404,7 +404,7 @@ struct widening_vector_impl<1, Head> : public widening_vector_impl_crtp<widening
     return (widening_vector_impl_base*)this;
   }
 
-  virtual widening_vector_impl_base *v_push_back(long val) {
+  virtual widening_vector_impl_base *v_push_back(long long val) {
     values_.push_back(val);
     return (widening_vector_impl_base*)this;
   }
@@ -417,8 +417,8 @@ struct widening_vector_impl<1, Head> : public widening_vector_impl_crtp<widening
     return (float)values_[i];
   }
 
-  virtual long v_get_long(size_t i) const {
-    return (long)values_[i];
+  virtual long long v_get_long(size_t i) const {
+    return (long long)values_[i];
   }
 
   virtual std::type_index v_get_common_type_index(std::type_index idx) const {
@@ -470,7 +470,7 @@ public:
     current_ = current_->v_push_back(val);
   }
 
-  void push_back(long val) {
+  void push_back(long long val) {
     current_ = current_->v_push_back(val);
   }
 

@@ -274,7 +274,7 @@
 	      break;
 	    case 'u':
 	      {
-		long sumv = 0;
+		long long sumv = 0;
 		for (int i = 0; i < 4; i++) {
 		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
@@ -292,7 +292,7 @@
 	      break;
 	    case 'U':
 	      {
-		long sumv = 0;
+		long long sumv = 0;
 		for (int i = 0; i < 8; i++) {
 		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
@@ -387,7 +387,7 @@
 	      break;
 	    case 'u':
 	      {
-		long sumv = 0;
+		long long sumv = 0;
 		for (int i = 0; i < 4; i++) {
 		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
@@ -405,7 +405,7 @@
 	      break;
 	    case 'U':
 	      {
-		long sumv = 0;
+		long long sumv = 0;
 		for (int i = 0; i < 8; i++) {
 		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;

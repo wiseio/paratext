@@ -107,14 +107,14 @@ namespace ParaText {
       Returns the (start, end) boundaries of a specific chunk. The ending
       index is always inclusive.
      */
-    std::pair<long, long> get_chunk(size_t index) const {
+    std::pair<long long, long long> get_chunk(size_t index) const {
       return std::make_pair(start_of_chunk_[index], end_of_chunk_[index]);
     }
 
   private:
-    std::pair<long, char> get_num_trailing_escapes(long start_of_chunk, long end_of_chunk) {
-      long num_trailing_escapes = 0;
-      long k = end_of_chunk;
+    std::pair<long long, char> get_num_trailing_escapes(long long start_of_chunk, long long end_of_chunk) {
+      long long num_trailing_escapes = 0;
+      long long k = end_of_chunk;
       char successor = 0;
       if (end_of_chunk < lastpos_) {
         in_.clear();
@@ -137,14 +137,14 @@ namespace ParaText {
     }
 
     void compute_offsets(bool allow_quoted_newlines = true) {
-      const size_t chunk_size = std::max(2L, (long)((length_ - starting_offset_) / maximum_chunks_));
-      long start_of_chunk = starting_offset_;
+      const size_t chunk_size = std::max(2LL, (long long)((length_ - starting_offset_) / maximum_chunks_));
+      long long start_of_chunk = starting_offset_;
 #ifdef PARALOAD_DEBUG
       std::cerr << "number of threads: " << maximum_chunks_ << std::endl;
       std::cerr << "length: " << length_ << std::endl;
 #endif
       for (size_t worker_id = 0; worker_id < maximum_chunks_; worker_id++) {
-        long end_of_chunk = std::min(lastpos_, start_of_chunk + (long)chunk_size);
+        long long end_of_chunk = std::min(lastpos_, start_of_chunk + (long long)chunk_size);
         if (end_of_chunk < start_of_chunk) {
           start_of_chunk = lastpos_ + 1;
           end_of_chunk = lastpos_ + 1;
@@ -158,11 +158,11 @@ namespace ParaText {
         if (worker_id == maximum_chunks_ - 1) {
           end_of_chunk = lastpos_;
         }
-        long trailing_escapes;
+        long long trailing_escapes;
         char trailing_successor;
         std::tie(trailing_escapes, trailing_successor) = get_num_trailing_escapes(start_of_chunk, end_of_chunk);
         if (trailing_escapes % 2 == 1) {
-          long extra = 0;
+          long long extra = 0;
           switch (trailing_successor) {
           case 'x': /* \xYY */
             extra = 3;
@@ -238,9 +238,9 @@ namespace ParaText {
         }
         in_.clear();
         in_.seekg(end_of_chunk_[worker_id], std::ios_base::beg);
-        long new_end = end_of_chunk_[worker_id];
+        long long new_end = end_of_chunk_[worker_id];
         bool new_end_found = false;
-        long current = new_end;
+        long long current = new_end;
         while (in_ && !new_end_found) {
           in_.read(buf, block_size);
           size_t nread = in_.gcount();
@@ -327,7 +327,7 @@ namespace ParaText {
 #ifdef PARALOAD_DEBUG
             std::cerr << "[A] current=" << current << " next=" << next << " quotes_so_far=" << cumulative_quote_sum[current] << std::endl;
 #endif
-            long pos = workers[next]->get_first_unquoted_newline();
+            long long pos = workers[next]->get_first_unquoted_newline();
             if (pos >= 0) { /* resolved */
               end_of_chunk_[current] = pos;
               if (end_of_chunk_[next] == pos) { /* take all of next chunk. */
@@ -359,7 +359,7 @@ namespace ParaText {
 #ifdef PARALOAD_DEBUG
             std::cerr << "[B] current=" << current << " next=" << next << " quotes_so_far=" << cumulative_quote_sum[next] << std::endl;
 #endif
-            long pos = workers[next]->get_first_quoted_newline();
+            long long pos = workers[next]->get_first_quoted_newline();
             if (pos >= 0) { /* resolution*/
               end_of_chunk_[current] = pos;
               if (end_of_chunk_[next] == pos) { /*take all of next chunk. */
@@ -395,10 +395,10 @@ namespace ParaText {
     std::string filename_;
     size_t maximum_chunks_;
     size_t length_;
-    long lastpos_;
-    long starting_offset_;
-    std::vector<long> start_of_chunk_;
-    std::vector<long> end_of_chunk_;
+    long long lastpos_;
+    long long starting_offset_;
+    std::vector<long long> start_of_chunk_;
+    std::vector<long long> end_of_chunk_;
   };
 }
 #endif

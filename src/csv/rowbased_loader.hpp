@@ -61,7 +61,7 @@ public:
     std::vector<std::thread> threads;
     std::vector<std::shared_ptr<RowBasedParseWorker> > workers;
     for (size_t worker_id = 0; worker_id < params.num_threads; worker_id++) {
-      long start_of_chunk, end_of_chunk = 0;
+      long long start_of_chunk, end_of_chunk = 0;
       std::tie(start_of_chunk, end_of_chunk) = chunker_.get_chunk(worker_id);
       
       /* If the chunk was eliminated because its entirety represents quoted
