@@ -191,7 +191,8 @@ namespace ParaText {
           default:
             {
               std::ostringstream ostr;
-              ostr << "invalid escape character: \\" << ostr;
+              ostr << "invalid escape character: \\" << trailing_successor;
+              throw std::logic_error(ostr.str());
             }
           }
           if (end_of_chunk + extra > lastpos_) {
