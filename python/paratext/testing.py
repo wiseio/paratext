@@ -161,9 +161,30 @@ def assert_dictframe_almost_equal(left, right, err_msg=""):
     if len(msg) > 0:
         raise AssertionError(msg)
 
+_words = None
+def sample_words(n):
+    global _words
+    if _words is None:
+        path = "/usr/share/dict/words"
+        if os.path.isfile(path):
+            fid = open(path)
+            _words = [line.strip() for line in fid.readlines()]
+        else:
+            _words = []
+
+    if _words:
+        return random.sample(_words, n)
+    elif n > 100000:
+        # random.sample also raises if we sample more than _words, and /usr/share/dict/words usually has ~200k entries
+        raise ValueError("We're unlikely to be able to generate this many unique words in reasonable time")
+    else:
+        result = set()
+        while len(result) < n:
+            word = ''.join([chr(random.randint(ord('a'), ord('z'))) for _ in range(random.randint(4, 10))])
+            result.add(word)
+        return list(result)
+
 def generate_mixed_frame(num_rows, num_floats, num_cats, num_ints):
-    fid = open("/usr/share/dict/words")
-    words=[line.strip() for line in fid.readlines()]
     num_cols = num_floats + num_cats + num_ints
     perm = np.random.permutation(num_cols)
     num_catints = num_cats + num_ints
@@ -184,9 +205,9 @@ def generate_mixed_frame(num_rows, num_floats, num_cats, num_ints):
             tricky_delims = np.asarray(["\n"] * num_newlines + [","] * num_commas)
             np.random.shuffle(tricky_delims)
             for delim in tricky_delims:
-                X[row] += ' '.join(random.sample(words, 5))
+                X[row] += ' '.join(sample_words(5))
                 X[row] += delim
-                X[row] += ' '.join(random.sample(words, 5))
+                X[row] += ' '.join(sample_words(5))
         d[col] = X
         dtypes[col] = np.object
     for col in float_ids:
@@ -197,7 +218,7 @@ def generate_mixed_frame(num_rows, num_floats, num_cats, num_ints):
     dtypes_int = [np.uint8, np.int8, np.uint16, np.int16, np.uint32, np.int32, np.uint64, np.int64]
     for col in int_ids:
         j = np.random.randint(0, len(min_int))
-        d[col] = np.asarray(np.random.randint(min_int[j], max_int[j], num_rows), dtype=dtypes_int[j])
+        d[col] = np.random.randint(min_int[j], max_int[j], num_rows, dtype=dtypes_int[j])
         dtypes[col] = dtypes_int[j]
     return d, dtypes
 

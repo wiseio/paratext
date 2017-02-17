@@ -31,7 +31,6 @@ import paratext_internal as pti
 import os
 import six
 from six.moves import range
-from six.moves.urllib_parse import urlparse
 
 import random
 import numpy as np

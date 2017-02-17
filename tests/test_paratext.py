@@ -129,6 +129,10 @@ class TestMixedFiles:
             logging.debug("filename: %s" % fn)
             paratext.serial.save_frame(fn, expected, allow_quoted_newlines=True, out_encoding='utf-8')
             actual = paratext.load_csv_to_pandas(fn, allow_quoted_newlines=True, out_encoding='utf-8', num_threads=num_threads)
+            if num_rows == 0:
+                # Not fair to expect us to guess this correctly with no data. In particular we'll probably guess uint8 for the numeric cols.
+                for col in actual:
+                    actual[col] = actual[col].astype(expected[col].dtype)
             assert_dictframe_almost_equal(actual, expected)
 
     def test_mixed_frame(self):

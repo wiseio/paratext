@@ -34,6 +34,7 @@
 #include <fstream>
 #include <exception>
 #include <stdexcept>
+#include <locale>
 
 namespace ParaText {
 
@@ -79,7 +80,7 @@ public:
     (void)data_begin;
     (void)file_end;
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     column_index_ = 0;
     quote_started_ = '\0';
     escape_jump_ = 0;
@@ -87,7 +88,11 @@ public:
     size_t spos_line = begin, epos_line = begin;
     const size_t block_size = params.block_size;
     convert_null_to_space_ = params.convert_null_to_space;
+#ifndef _WIN32
     char buf[block_size];
+#else
+    char *buf = (char *)_malloca(block_size);
+#endif
     in.seekg(current, std::ios_base::beg);
     definitely_string_ = false;
 #ifdef PARALOAD_DEBUG
@@ -251,7 +256,7 @@ public:
           handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
         }
         else {
-          handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
+          handlers_[column_index_]->process_integer(fast_atoi<long long>(token_.begin(), token_.end()));
         }
       }
     } else {
@@ -315,7 +320,7 @@ public:
         }
       }
       if (integer_possible) {
-        handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
+        handlers_[column_index_]->process_integer(fast_atoi<long long>(token_.begin(), token_.end()));
       }
       else if (float_possible || exp_possible) {
         handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
@@ -345,7 +350,7 @@ private:
   std::vector<std::shared_ptr<ColumnHandler> > handlers_;
   std::vector<char>                            token_;
   std::vector<char>                            token_aux_;
-  std::vector<std::pair<size_t, long> >        long_cache_;
+  std::vector<std::pair<size_t, long long> >   long_cache_;
   std::vector<std::pair<size_t, double> >      double_cache_;
   std::vector<char>                            str_cache_data_;
   std::vector<size_t>                          str_cache_offsets_;

@@ -65,7 +65,7 @@ namespace CSV {
         throw std::logic_error(ostr.str());
       }
       length_ = fs.st_size;
-      in_.open(filename);
+      in_.open(filename, std::ios::binary);
       if (!in_) {
         std::ostringstream ostr;
         ostr << "cannot open file '" << filename << "'";
@@ -108,19 +108,26 @@ namespace CSV {
       size_t current = 0;
       size_t block_size = 4096;
       size_t escape_jump = 0;
+#ifndef _WIN32
       char buf[block_size];
+#else
+      char *buf = (char *)_malloca(block_size);
+#endif
       char quote_started = 0;
       bool eoh_encountered = false;
       bool soh_encountered = false;
       in_.seekg(0, std::ios_base::beg);
       while (current < length_ && !eoh_encountered) {
         if (current % block_size == 0) { /* The block is aligned. */
-          in_.read(buf, std::min(length_ - current, block_size));
+          in_.read(buf, std::min((length_ - current) + 1, block_size));
         }
         else { /* Our first read should ensure our further reads are block-aligned. */
-          in_.read(buf, std::min(length_ - current, std::min(block_size, current % block_size)));
+          in_.read(buf, std::min((length_ - current) + 1, std::min(block_size, current % block_size)));
         }
         size_t nread = in_.gcount();
+        if (nread == 0) {
+          break;
+        }
         size_t i = 0;
         /* ignore leading whitespace in the file. */
         while (i < nread && !soh_encountered) {
