@@ -300,64 +300,25 @@ public:
           }
         }
       }
-      if (!handled) {
-        if (i < token_.size()) {
-          const std::locale loc("");
-          integer_possible = std::isdigit(token_[i], loc);
-          i++;
-          float_possible = integer_possible, exp_possible = integer_possible;
-          while (i < token_.size() && integer_possible) {
-            integer_possible = isdigit(token_[i]);
+      if (!handled && i < token_.size()) {
+        for (; i < token_.size() && isdigit(token_[i]); i++) {}
+        integer_possible = i == token_.size();
+        if (i + 1 < token_.size()) {
+          if (token_[i] == '.') {
             i++;
+            for (; i < token_.size() && isdigit(token_[i]); i++) {}
+            float_possible = i == token_.size();
           }
-          if (i < token_.size()) {
-            integer_possible = false;
-            float_possible = token_[i] == '.';
+          if (i + 1 < token_.size() && (i > 0) && (token_[i] == 'E' || token_[i] == 'e')) {
             i++;
-            while (i < token_.size() && float_possible) {
-              float_possible = isdigit(token_[i]);
+            if ((i < token_.size() - 1) && (token_[i] == '+' || token_[i] == '-')) {
               i++;
             }
-            if (float_possible && i < token_.size()) {
-              float_possible = false;
-              exp_possible = token_[i] == 'E' || token_[i] == 'e';
-              i++;
-              if (exp_possible && i < token_.size()) {
-                //std::cout << "A";
-                if (token_[i] == '+' || token_[i] == '-') {
-                  //std::cout << "B";
-                  i++;
-                  if (i < token_.size()) {
-                    //std::cout << "C";
-                    exp_possible = isdigit(token_[i]);
-                    i++;
-                    while (i < token_.size() && exp_possible) {
-                      exp_possible = isdigit(token_[i]);
-                      i++;
-                    }
-                  }
-                  else {
-                    exp_possible = false;
-                  }
-                }
-                else if (isdigit(token_[i])) {
-                  //std::cout << "D";
-                  while (i < token_.size() && exp_possible) {
-                    exp_possible = isdigit(token_[i]);
-                    i++;
-                  }
-                  //std::cout << "E" << exp_possible << (token_[i-1]);
-                }
-                else {
-                  exp_possible = false;
-                }
-              }
-              else {
-                exp_possible = false;
-              }
-            }
+            for (; i < token_.size() && isdigit(token_[i]); i++) {}
+            exp_possible = i == token_.size();
           }
         }
+      }
       if (integer_possible) {
         handlers_[column_index_]->process_integer(fast_atoi<long long>(token_.begin(), token_.end()));
       }
@@ -371,8 +332,6 @@ public:
         }
         handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
         token_aux_.clear();
-      }
-
       }
     }
     column_index_++;

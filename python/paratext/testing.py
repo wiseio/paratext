@@ -126,14 +126,14 @@ def assert_seq_almost_equal(left, right):
         if q.any():
             raise AssertionError("object sequences mismatch: %5.5f%%, rows: %s" % (m, str(np.where(q)[0].tolist())))
     else:
-        if np.issubdtype(left.dtype, np.floating):
-            left_float = left
-        else:
-            left_float = np.asarray(left, dtype=np.float_)
-        if np.issubdtype(right.dtype, np.floating):
-            right_float = right
-        else:
-            right_float = np.asarray(right, dtype=np.float_)
+        left_float = np.asarray(left, dtype=np.float_)
+        right_float = np.asarray(right, dtype=np.float_)        
+        #if np.issubdtype(left.dtype, np.floating):
+        #    left_float = left
+        #else:
+        #if np.issubdtype(right.dtype, np.floating):
+        #    right_float = right
+        #else:
         pandas.util.testing.assert_almost_equal(left_float, right_float)
 
 def assert_dictframe_almost_equal(left, right, err_msg=""):
