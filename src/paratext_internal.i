@@ -33,11 +33,12 @@
 #warning "no SWIG typemaps defined for the target language"
 #endif
 
-%include "std_string.i"
+ //%include "std_string.i"
 %include "std_vector.i"
 %include "std_pair.i"
 
 %ignore ParaText::CSV::ColBasedPopulator::get_type_index() const;
+%ignore ParaText::CSV::StringVectorPopulator::get_type_index() const;
 %ignore ParaText::CSV::ColBasedLoader::get_type_index(size_t) const;
 %ignore ParaText::CSV::ColBasedIterator::operator++();
 %ignore ParaText::CSV::ColBasedIterator::operator++(int);
@@ -56,6 +57,11 @@ namespace std {
 %include "generic/parse_params.hpp"
 %{
 #include "generic/parse_params.hpp"
+%}
+
+%include "generic/encoding.hpp"
+%{
+#include "generic/encoding.hpp"
 %}
 
 //////// CSV-loading Stuff
@@ -78,6 +84,11 @@ namespace std {
 %include "diagnostic/parse_and_sum.hpp"
 %{
 #include "diagnostic/parse_and_sum.hpp"
+%}
+
+%include "util/safe_string_output.hpp"
+%{
+#include "util/safe_string_output.hpp"
 %}
 
 #if defined(PARATEXT_ROWBASED_CSV)

@@ -37,7 +37,7 @@ else:
 
 from numpy.distutils.core import setup, Extension
 
-version = "0.1.1rc1"
+version = "0.2.1rc1"
 
 init_py = open("paratext/__init__.py", "w")
 
@@ -45,7 +45,6 @@ init_py.write("""
 __all__ = ['paratext']
 
 from paratext.core import *
-from paratext.helpers import *
 
 import paratext_internal
 import warnings
