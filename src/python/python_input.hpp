@@ -11,6 +11,7 @@
 #include <numpy/arrayobject.h>
 #include <numpy/npy_math.h>
 #include <stdio.h>
+#include <iterator>
 
 #include "processor.hpp"
 #include "util/unicode.hpp"
@@ -134,7 +135,7 @@ namespace ParaText {
   typename std::enable_if<std::is_arithmetic<T>::value, float>::type
   get_as_long(const T &t, size_t item_size) {
     (void)item_size;
-    return (long)t;
+    return (long long)t;
   }
   
   
@@ -150,9 +151,9 @@ namespace ParaText {
     return (bool)PyObject_IsTrue(obj);
   }
   
-  long get_as_long(PyObject *obj, size_t item_size) {
+  long long get_as_long(PyObject *obj, size_t item_size) {
     (void)item_size;
-    long retval = 0;
+    long long retval = 0;
     if (PyInt_Check(obj)) {
       retval = PyInt_AsLong(obj);
     }
@@ -163,13 +164,13 @@ namespace ParaText {
       retval = PyObject_IsTrue(obj);
     }
     else if (PyFloat_Check(obj)) {
-      retval = (long)PyFloat_AsDouble(obj);
+      retval = (long long)PyFloat_AsDouble(obj);
     }
     else if (PyBytes_GenericCheck(obj)) {
       char *buf;
       Py_ssize_t length;
       PyBytes_AsCharString(obj, &buf, &length);
-      retval = ::fast_atoi<long>(buf, buf + length);
+      retval = ::fast_atoi<long long>(buf, buf + length);
     }
     else if (PyUnicode_Check(obj)) {
       PyRefGuard temp(PyUnicode_AsUTF8String(obj));
@@ -179,7 +180,7 @@ namespace ParaText {
       Py_ssize_t size;
       const char *buf = PyUnicode_AS_DATA(temp.get());
       size = PyUnicode_GET_DATA_SIZE(temp.get());
-      retval = ::fast_atoi<long>(buf, buf + size);
+      retval = ::fast_atoi<long long>(buf, buf + size);
     }
     else {
       throw std::string("cannot handle item");
@@ -236,13 +237,13 @@ namespace ParaText {
     }
     else if (PyInt_Check(obj)) {
       std::ostringstream ostr;
-      long ival = PyInt_AsLong(obj);
+      long long ival = PyInt_AsLong(obj);
       ostr << ival;
       return ostr.str();
     }
     else if (PyLong_Check(obj)) {
       std::ostringstream ostr;
-      long ival = PyLong_AsLong(obj);
+      long long ival = PyLong_AsLongLong(obj);
       ostr << ival;
       return ostr.str();
     }
@@ -269,30 +270,30 @@ namespace ParaText {
     return ::bsd_strtod(s.begin(), s.end());
   }
   
-  long get_as_long(const npy_ucs4 *buf, size_t item_size) {
+  long long get_as_long(const npy_ucs4 *buf, size_t item_size) {
     (void)buf;
     std::string s(get_as_string(buf, item_size));
-    return ::fast_atoi<long>(s.begin(), s.end());
+    return ::fast_atoi<long long>(s.begin(), s.end());
   }
   
-  long get_as_long(const char *buf, size_t item_size) {
+  long long get_as_long(const char *buf, size_t item_size) {
     (void)buf;
     std::string s(get_as_string(buf, item_size));
-    return ::fast_atoi<long>(s.begin(), s.end());
+    return ::fast_atoi<long long>(s.begin(), s.end());
   }
   
-  long get_as_bool(npy_ucs4 *buf, size_t item_size) {
+  long long get_as_bool(npy_ucs4 *buf, size_t item_size) {
     (void)buf;
     (void)item_size;
-    long retval = 0;
+    long long retval = 0;
     throw std::string("cannot convert UCS-4 to a float");
     return retval;
   }
   
-  long get_as_bool(char *buf, size_t item_size) {
+  long long get_as_bool(char *buf, size_t item_size) {
     (void)buf;
     (void)item_size;
-    long retval = 0;
+    long long retval = 0;
     throw std::string("cannot convert UTF-8 to a float");
     return retval;
   }
@@ -596,7 +597,7 @@ public:
     return get_as_float(advancer->current(), advancer->get_item_size());
   }
 
-  virtual long get_long() const {
+  virtual long long get_long() const {
     return get_as_long(advancer->current(), advancer->get_item_size());
   }
 

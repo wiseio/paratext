@@ -296,7 +296,7 @@ struct string_array_output_iterator  : public std::iterator<std::forward_iterato
     return output;
   }
 
-  long i;
+  long long i;
   std::string output;
   PyArrayObject *array;
 };

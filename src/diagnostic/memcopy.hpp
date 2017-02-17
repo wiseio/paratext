@@ -33,7 +33,10 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#ifndef _WIN32
+    #include <unistd.h>
+#endif
 #include <thread>
 #include <sstream>
 
@@ -68,9 +71,13 @@ public:
 
   void parse_impl(const std::string &filename) {
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     const size_t block_size = block_size_;
+#ifndef _WIN32
     char buf[block_size];
+#else
+    char *buf = (char *)_malloca(block_size);
+#endif
     in.seekg(chunk_start_, std::ios_base::beg);
     size_t current = chunk_start_;
     while (current <= chunk_end_) {

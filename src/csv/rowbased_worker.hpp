@@ -47,7 +47,7 @@ public:
 
   void parse(const std::string &filename) {
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     const size_t block_size = block_size_;
     char buf[block_size];
     in.seekg(chunk_start_, std::ios_base::beg);
@@ -114,10 +114,10 @@ public:
             //std::cout << "[" << (int)state << "," << std::string(token.begin(), token.end()) << "]" << std::endl;
             if (state < 2) {
               input.push_back(0);
-              long val = fast_atoi<long>(token.begin(), token.end());
+              long long val = fast_atoi<long long>(token.begin(), token.end());
                 unsigned char *bb = (unsigned char *)(void*)&val;
               //input.insert(0);
-              input.insert(input.end(), bb, bb + sizeof(long));
+              input.insert(input.end(), bb, bb + sizeof(long long));
               #if 0
               msgpack::pack(ss, val);
               input.insert(input.end(), ss.data(), ss.data() + ss.size());
@@ -132,7 +132,7 @@ public:
               else {
                 input.push_back(128);
                 unsigned char *bb = (unsigned char *)(void*)&val;
-                input.insert(input.end(), bb, bb + sizeof(long));
+                input.insert(input.end(), bb, bb + sizeof(long long));
               }
               #endif
             }
@@ -144,9 +144,9 @@ public:
             }
             else {
               input.push_back(2);
-              long len = token.size();
+              long long len = token.size();
               unsigned char *bl = (unsigned char *)(void*)&len;
-              input.insert(input.end(), bl, bl + sizeof(long));
+              input.insert(input.end(), bl, bl + sizeof(long long));
               input.insert(input.end(), token.begin(), token.end());
             }
             if (rows_.size() == 0) {

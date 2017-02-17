@@ -57,7 +57,7 @@ public:
 
   void parse_impl(const std::string &filename) {
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     const size_t block_size = 32768;
     char buf[block_size];
     in.seekg(chunk_start_, std::ios_base::beg);
@@ -271,11 +271,11 @@ public:
     return num_quotes_;
   }
   
-  long get_first_quoted_newline() const {
+  long long get_first_quoted_newline() const {
     return first_quoted_newline_;
   }
 
-  long get_first_unquoted_newline() const {
+  long long get_first_unquoted_newline() const {
     return first_unquoted_newline_;
   }
 
@@ -302,8 +302,8 @@ private:
   size_t chunk_start_;
   size_t chunk_end_;
   size_t num_quotes_;
-  long first_unquoted_newline_;
-  long first_quoted_newline_;
+  long long first_unquoted_newline_;
+  long long first_quoted_newline_;
   std::exception_ptr thread_exception_;
 };
 }

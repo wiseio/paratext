@@ -33,6 +33,7 @@
 #include <sstream>
 #include <limits>
 #include <random>
+#include <locale>
 #include "unicode.hpp"
 
   template <class T>
@@ -138,7 +139,8 @@
     if (!mandatory_quoting) {
       for (Iterator it = begin; it != end; it++) {
 	char c = *it;
-	if (std::isspace(c)) {
+	const std::locale loc("");
+	if (std::isspace(c, loc)) {
 	  contains_white_space = true;
 	}
     else if (c < 32 || c >= 127) {
@@ -272,7 +274,7 @@
 	      break;
 	    case 'u':
 	      {
-		long sumv = 0;
+		long long sumv = 0;
 		for (int i = 0; i < 4; i++) {
 		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
@@ -290,7 +292,7 @@
 	      break;
 	    case 'U':
 	      {
-		long sumv = 0;
+		long long sumv = 0;
 		for (int i = 0; i < 8; i++) {
 		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
@@ -385,7 +387,7 @@
 	      break;
 	    case 'u':
 	      {
-		long sumv = 0;
+		long long sumv = 0;
 		for (int i = 0; i < 4; i++) {
 		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
@@ -403,7 +405,7 @@
 	      break;
 	    case 'U':
 	      {
-		long sumv = 0;
+		long long sumv = 0;
 		for (int i = 0; i < 8; i++) {
 		  if (begin + 1 != end && isxdigit(*(begin + 1))) {
 		    begin++;
@@ -452,7 +454,8 @@
    */
   template <class Iterator>
   inline Iterator eat_whitespace(Iterator begin, Iterator end) {
-    while (begin != end && std::isspace(*begin)) { ++begin; }
+    const std::locale loc("");
+    while (begin != end && std::isspace(*begin, loc)) { ++begin; }
     return begin;
   }
 

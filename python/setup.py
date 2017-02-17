@@ -4,7 +4,11 @@ import json
 
 # First, check for the presence of swig, which we will need to build
 # the Python bindings.
-p = subprocess.Popen(["which", "swig"])
+if sys.platform == "win32":
+    cmd = "where" # no 'which' command on windows
+else:
+    cmd = "which"
+p = subprocess.Popen([cmd, "swig"])
 p.communicate("")
 if p.returncode != 0:
     print("Error: you must install SWIG first.")
@@ -18,11 +22,16 @@ extra_libraries = []
 if sys.platform == 'darwin':
     extra_compile_args += ["-m64", "-D_REENTRANT"]
     extra_link_args += []
-    extra_libraries += []
+    extra_libraries += ["stdc++"]
 elif sys.platform.startswith("linux"):
     extra_compile_args += []
     extra_link_args += []
-    extra_libraries += []
+    extra_libraries += ["stdc++"]
+elif sys.platform == "win32":
+    extra_link_args = []
+    extra_compile_args = ["/Wall"]
+    extra_libraries = []
+    
 
 if len(set(('develop', 'release', 'bdist_egg', 'bdist_rpm',
             'bdist_wininst', 'install_egg_info', 'build_sphinx',
@@ -62,7 +71,7 @@ swig_cmd = ["swig", "-c++", "-python"]
 if sys.version_info >= (3,):
     swig_cmd += ["-py3"]
 
-swig_cmd += ["-I../src/", "-outdir", "./", "../src/paratext_internal.i"]
+swig_cmd += ["-I" + os.path.join("..", "src"), "-outdir", ".", os.path.join("..", "src", "paratext_internal.i")]
 
 print("running swig: ", swig_cmd)
 p = subprocess.Popen(swig_cmd)
@@ -79,11 +88,12 @@ See README
 """,
       keywords=['csv', 'reading'],
       ext_modules=[Extension('_paratext_internal',
-                             ['../src/paratext_internal_wrap.cxx', '../src/paratext_internal.cpp'],
+                             [os.path.join('..', 'src', 'paratext_internal_wrap.cxx'),
+                              os.path.join('..', 'src', 'paratext_internal.cpp')],
                              extra_link_args = extra_link_args,
                              extra_compile_args = extra_compile_args,
-                             include_dirs=['../src/'],
-                             libraries=["stdc++"] + extra_libraries),
+                             include_dirs=[os.path.join('..', 'src')],
+                             libraries = extra_libraries),
                    ],
       py_modules=["paratext_internal"],
       author="Damian Eads",
