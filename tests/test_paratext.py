@@ -92,7 +92,6 @@ class TestBasicFiles:
             actual = paratext.load_csv_to_pandas(fn)
             assert_dictframe_almost_equal(actual, expected)
 
-
     def test_basic_3x0x(self):
         filedata = b"""A,B,C
 """
@@ -166,3 +165,16 @@ class TestHellFiles:
                             for num_cols in [1,2,3,4,5,10]:
                                 for num_threads in [1,2,4,8,16]:
                                     yield self.do_hell_frame, dos, frame_encoding, out_encoding, include_null, allow_quoted_newlines, num_rows, num_cols, num_threads
+
+
+class TestTypeDetection:
+
+    def test_edge_case1(self):
+        filedata = b"""A,B
+A.1,3ABC
+"""
+        with generate_tempfile(filedata) as fn:
+            expected = {"A": ["A.1"], "B": ["3ABC"]}
+            logging.debug("filename: %s" % fn)
+            actual = paratext.load_csv_to_pandas(fn)
+            assert_dictframe_almost_equal(actual, expected)
