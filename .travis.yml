@@ -26,7 +26,7 @@ before_install:
   - python -V
   - which g++
   - g++ --version
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then sudo /bin/bash ci/osx_install.sh; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then /bin/bash ci/osx_install.sh; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo /bin/bash ci/linux_install.sh; fi
 
 # command to install dependencies

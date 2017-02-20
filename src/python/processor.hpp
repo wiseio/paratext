@@ -59,7 +59,7 @@ namespace ParaText {
     /*
       Tells the functor to ingest the next element, which is a long.
      */
-    virtual void process_long(long lval) = 0;
+    virtual void process_long(long long lval) = 0;
 
     /*
       Tells the functor to ingest the next element, which is a bool.
@@ -149,7 +149,7 @@ namespace ParaText {
     /*
       Retrieves a long at the current element.
      */
-    virtual long get_long() const = 0;
+    virtual long long get_long() const = 0;
 
 #ifdef PARATEXT_DATE_TIME
     /*

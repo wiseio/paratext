@@ -34,6 +34,7 @@
 #include <fstream>
 #include <exception>
 #include <stdexcept>
+#include <locale>
 
 namespace ParaText {
 
@@ -79,7 +80,7 @@ public:
     (void)data_begin;
     (void)file_end;
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     column_index_ = 0;
     quote_started_ = '\0';
     escape_jump_ = 0;
@@ -87,7 +88,11 @@ public:
     size_t spos_line = begin, epos_line = begin;
     const size_t block_size = params.block_size;
     convert_null_to_space_ = params.convert_null_to_space;
+#ifndef _WIN32
     char buf[block_size];
+#else
+    char *buf = (char *)_malloca(block_size);
+#endif
     in.seekg(current, std::ios_base::beg);
     definitely_string_ = false;
 #ifdef PARALOAD_DEBUG
@@ -251,7 +256,7 @@ public:
           handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
         }
         else {
-          handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
+          handlers_[column_index_]->process_integer(fast_atoi<long long>(token_.begin(), token_.end()));
         }
       }
     } else {
@@ -295,65 +300,27 @@ public:
           }
         }
       }
-      if (!handled) {
-        if (i < token_.size()) {
-          integer_possible = std::isdigit(token_[i]);
-          i++;
-          float_possible = integer_possible, exp_possible = integer_possible;
-          while (i < token_.size() && integer_possible) {
-            integer_possible = isdigit(token_[i]);
+      if (!handled && i < token_.size()) {
+        for (; i < token_.size() && isdigit(token_[i]); i++) {}
+        integer_possible = i == token_.size();
+        if (i + 1 < token_.size()) {
+          if (token_[i] == '.') {
             i++;
+            for (; i < token_.size() && isdigit(token_[i]); i++) {}
+            float_possible = i == token_.size();
           }
-          if (i < token_.size()) {
-            integer_possible = false;
-            float_possible = token_[i] == '.';
+          if (i + 1 < token_.size() && (i > 0) && (token_[i] == 'E' || token_[i] == 'e')) {
             i++;
-            while (i < token_.size() && float_possible) {
-              float_possible = isdigit(token_[i]);
+            if ((i < token_.size() - 1) && (token_[i] == '+' || token_[i] == '-')) {
               i++;
             }
-            if (float_possible && i < token_.size()) {
-              float_possible = false;
-              exp_possible = token_[i] == 'E' || token_[i] == 'e';
-              i++;
-              if (exp_possible && i < token_.size()) {
-                //std::cout << "A";
-                if (token_[i] == '+' || token_[i] == '-') {
-                  //std::cout << "B";
-                  i++;
-                  if (i < token_.size()) {
-                    //std::cout << "C";
-                    exp_possible = isdigit(token_[i]);
-                    i++;
-                    while (i < token_.size() && exp_possible) {
-                      exp_possible = isdigit(token_[i]);
-                      i++;
-                    }
-                  }
-                  else {
-                    exp_possible = false;
-                  }
-                }
-                else if (isdigit(token_[i])) {
-                  //std::cout << "D";
-                  while (i < token_.size() && exp_possible) {
-                    exp_possible = isdigit(token_[i]);
-                    i++;
-                  }
-                  //std::cout << "E" << exp_possible << (token_[i-1]);
-                }
-                else {
-                  exp_possible = false;
-                }
-              }
-              else {
-                exp_possible = false;
-              }
-            }
+            for (; i < token_.size() && isdigit(token_[i]); i++) {}
+            exp_possible = i == token_.size();
           }
         }
+      }
       if (integer_possible) {
-        handlers_[column_index_]->process_integer(fast_atoi<long>(token_.begin(), token_.end()));
+        handlers_[column_index_]->process_integer(fast_atoi<long long>(token_.begin(), token_.end()));
       }
       else if (float_possible || exp_possible) {
         handlers_[column_index_]->process_float(bsd_strtod(token_.begin(), token_.end()));
@@ -365,8 +332,6 @@ public:
         }
         handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
         token_aux_.clear();
-      }
-
       }
     }
     column_index_++;
@@ -385,7 +350,7 @@ private:
   std::vector<std::shared_ptr<ColumnHandler> > handlers_;
   std::vector<char>                            token_;
   std::vector<char>                            token_aux_;
-  std::vector<std::pair<size_t, long> >        long_cache_;
+  std::vector<std::pair<size_t, long long> >   long_cache_;
   std::vector<std::pair<size_t, double> >      double_cache_;
   std::vector<char>                            str_cache_data_;
   std::vector<size_t>                          str_cache_offsets_;

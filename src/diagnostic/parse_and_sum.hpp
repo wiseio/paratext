@@ -33,7 +33,10 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <unistd.h>
+
+#ifndef _WIN32
+    #include <unistd.h>
+#endif
 #include <thread>
 #include <sstream>
 
@@ -70,9 +73,13 @@ public:
 
   void parse_impl(const std::string &filename) {
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     const size_t block_size = block_size_;
-    char buf[block_size];
+#ifndef _WIN32
+      char buf[block_size];
+#else
+      char *buf = (char *)_malloca(block_size);
+#endif
     in.seekg(chunk_start_, std::ios_base::beg);
     size_t current = chunk_start_;
     sums_.resize(num_columns_);
@@ -150,7 +157,7 @@ public:
           return bsd_strtod(begin, end);
         }
         else {
-          return (double)fast_atoi<long>(begin, end);
+          return (double)fast_atoi<long long>(begin, end);
         }
       }
     }
@@ -198,7 +205,7 @@ private:
         chunker_.process(filename, 0, params.num_threads, params.allow_quoted_newlines);
       }
       for (size_t worker_id = 0; worker_id < chunker_.num_chunks(); worker_id++) {
-        long start_of_chunk = 0, end_of_chunk = 0;
+        long long start_of_chunk = 0, end_of_chunk = 0;
         std::tie(start_of_chunk, end_of_chunk) = chunker_.get_chunk(worker_id);
         if (start_of_chunk < 0 || end_of_chunk < 0) {
           continue;
