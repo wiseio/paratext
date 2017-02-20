@@ -1,0 +1,62 @@
+language: c++
+
+env:
+  - PY_VERSION=2.7
+  - PY_VERSION=3.5
+
+os:
+  - linux
+  - osx
+
+addons:
+  apt:
+    sources:
+    - sourceline: 'ppa:ubuntu-toolchain-r/test'
+    packages:
+    - g++-4.8
+
+before_install:
+  - echo "before_install"
+  - echo $VIRTUAL_ENV
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - df -h
+  - date
+  - pwd
+  - uname -a
+  - python -V
+  - which g++
+  - g++ --version
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then /bin/bash ci/osx_install.sh; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo /bin/bash ci/linux_install.sh; fi
+
+# command to install dependencies
+install:
+  - export CXX="$(cat .cxx.choice)"
+  - ls $(dirname $(which g++))/g++*
+  - echo "install"
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no
+  - conda update -q conda
+  # Useful for debugging any issues with conda
+  - conda info -a
+  - conda install python=$PY_VERSION nose
+  # Replace dep1 dep2 ... with your dependencies
+  - conda create -q -n test-environment python=$PY_VERSION swig=3.0.8 pandas numpy
+  - source activate test-environment
+  - cd python
+  - python setup.py build install
+  - cd ..
+  - pwd
+
+before_script:
+  - export PY_PREFIX=$(python -c "import sys; print(sys.prefix)")
+  - echo $PY_PREFIX
+  - export PYTHONPATH=$PY_PREFIX/lib/python$PY_VERSION/site-packages:$PYTHONPATH
+  - echo $PYTHONPATH
+
+# command to run tests
+script:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then echo regression tests skipped for Mac OS X; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then nosetests -s --failure-detail --with-xunit tests/test_paratext.py; fi

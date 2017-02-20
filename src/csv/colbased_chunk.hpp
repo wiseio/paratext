@@ -94,7 +94,7 @@ namespace CSV {
      * data was previously passed to this handler, this datum will be converted
      * to a string and treated as categorical.
      */
-    void process_integer(long val)               {
+    void process_integer(long long val)               {
       if (cat_data_.size() > 0 || forced_semantics_ == Semantics::CATEGORICAL || forced_semantics_ == Semantics::TEXT) {
         std::string s(std::to_string(val));
         process_categorical(s.begin(), s.end());
@@ -117,7 +117,7 @@ namespace CSV {
       else if (number_data_.size() > 0) {
         if (begin == end) {
           //std::cout << "{" << std::string(begin, end);
-          number_data_.push_back((long)0);
+          number_data_.push_back((long long)0);
         }
         else {
           //std::cout << "[" << std::string(begin, end);
@@ -248,7 +248,7 @@ namespace CSV {
       }
       else if (cat_data_.size() > 0) {
         for (size_t i = 0; i < cat_data_.size(); i++) {
-          text_data_.push_back(cat_keys_[cat_data_.get<long>(i)]);
+          text_data_.push_back(cat_keys_[cat_data_.get<long long>(i)]);
         }
         cat_data_.clear();
         cat_data_.shrink_to_fit();
@@ -263,14 +263,14 @@ namespace CSV {
         text_data_.push_back(data);
       }
       else if (forced_semantics_ == Semantics::CATEGORICAL) {
-        cat_data_.push_back((long)get_string_id(data));
+        cat_data_.push_back((long long)get_string_id(data));
       }
       else if (data.size() > max_level_name_length_ || cat_keys_.size() > max_levels_) {
         convert_to_text();
         text_data_.push_back(data);
       }
       else {
-        cat_data_.push_back((long)get_string_id(data));
+        cat_data_.push_back((long long)get_string_id(data));
       }
     }
 

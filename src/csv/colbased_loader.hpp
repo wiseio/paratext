@@ -97,9 +97,25 @@ namespace ParaText {
 
   class ColBasedPopulator {
   public:
-    ColBasedPopulator() : loader_(0), column_index_(0) {}
+    ColBasedPopulator() : loader_(0), column_index_(0), in_encoding_(Encoding::UNKNOWN_BYTES), out_encoding_(Encoding::UNKNOWN_BYTES) {}
 
-    ColBasedPopulator(const ColBasedLoader *loader, size_t column_index) : loader_(loader), column_index_(column_index) {}
+    ColBasedPopulator(const ColBasedLoader *loader, size_t column_index) : loader_(loader), column_index_(column_index), in_encoding_(Encoding::UNKNOWN_BYTES), out_encoding_(Encoding::UNKNOWN_BYTES) {}
+
+    void set_in_encoding(ParaText::Encoding encoding) {
+      in_encoding_ = encoding;
+    }
+
+    void set_out_encoding(ParaText::Encoding encoding) {
+      out_encoding_ = encoding;
+    }
+
+    ParaText::Encoding get_in_encoding() const {
+      return in_encoding_;
+    }
+
+    ParaText::Encoding get_out_encoding() const {
+      return out_encoding_;
+    }
 
     std::type_index get_type_index() const;
 
@@ -117,6 +133,62 @@ namespace ParaText {
   private:
     const ColBasedLoader *loader_;
     size_t column_index_;
+    ParaText::Encoding in_encoding_;
+    ParaText::Encoding out_encoding_;
+  };
+
+  class StringVectorPopulator {
+  public:
+    StringVectorPopulator(const std::vector<std::string> &v) : vec_(v) {}
+    
+    void set_in_encoding(ParaText::Encoding encoding) {
+      in_encoding_ = encoding;
+    }
+    
+    void set_out_encoding(ParaText::Encoding encoding) {
+      out_encoding_ = encoding;
+    }
+    
+    ParaText::Encoding get_in_encoding() const {
+      return in_encoding_;
+    }
+    
+    ParaText::Encoding get_out_encoding() const {
+      return out_encoding_;
+    }
+    
+    std::type_index get_type_index() const;
+    
+    template <class OutputIterator, class T = typename std::iterator_traits<OutputIterator>::value_type>
+    void insert(OutputIterator oit) const {
+      for (size_t i = 0; i < vec_.size(); i++) {
+        *oit = vec_[i];
+        oit++;
+      }
+    }
+    
+    template <class T>
+    void insert_into_buffer(T *buffer) const {
+      (void)buffer;
+      throw std::logic_error("only supported for numeric data");
+    }
+
+    template <class OutputIterator, class T = typename std::iterator_traits<OutputIterator>::value_type>
+    void insert_and_forget(OutputIterator oit) const {
+      for (size_t i = 0; i < vec_.size(); i++) {
+        *oit = vec_[i];
+        oit++;
+      }
+    }
+    
+    size_t size() const {
+      return vec_.size();
+    }
+    
+  private:
+    const std::vector<std::string> &vec_;
+    ParaText::Encoding in_encoding_;
+    ParaText::Encoding out_encoding_;
   };
 
   /*
@@ -124,7 +196,7 @@ namespace ParaText {
    */
   class ColBasedLoader {
   public:
-    ColBasedLoader() : cached_categorical_column_index_(std::numeric_limits<size_t>::max()) {}
+    ColBasedLoader() : cached_categorical_column_index_(std::numeric_limits<size_t>::max()), in_encoding_(Encoding::UNKNOWN_BYTES), out_encoding_(Encoding::UNKNOWN_BYTES) {}
 
     /*
       Called before .load(). Used to force a type on a column regardless of the type
@@ -162,7 +234,7 @@ namespace ParaText {
       Returns the number of columns parsed by this loader.
      */
     size_t     get_num_columns() const {
-      return column_chunks_.size() == 0 ? 0 : column_chunks_[0].size();
+      return column_chunks_.size() == 0 ? header_parser_.get_num_columns() : column_chunks_[0].size();
     }
 
     /*
@@ -175,8 +247,11 @@ namespace ParaText {
     /*
       Returns the categorical levels.
      */
-    const std::vector<std::string> &get_levels(size_t column_index) const {
-      return level_names_[column_index];
+    ParaText::CSV::StringVectorPopulator get_levels(size_t column_index) const {
+      CSV::StringVectorPopulator pop(level_names_[column_index]);
+      pop.set_in_encoding(in_encoding_);
+      pop.set_out_encoding(out_encoding_);
+      return pop;
     }
 
     /*
@@ -224,10 +299,9 @@ namespace ParaText {
     }
 
     ColBasedPopulator get_column(size_t column_index) const {
-      /*if (!all_numeric_[column_index]) {
-        cache_cat_or_text_column(column_index);
-        }*/
       ColBasedPopulator populator(this, column_index);
+      populator.set_in_encoding(in_encoding_);
+      populator.set_out_encoding(out_encoding_);
       return populator;
     }
 
@@ -262,6 +336,22 @@ namespace ParaText {
       }
       cat_buffer_[column_index].clear();
       cat_buffer_[column_index].shrink_to_fit();
+    }
+
+    void set_in_encoding(ParaText::Encoding encoding) {
+      in_encoding_ = encoding;
+    }
+
+    void set_out_encoding(ParaText::Encoding encoding) {
+      out_encoding_ = encoding;
+    }
+
+    ParaText::Encoding get_in_encoding() const {
+      return in_encoding_;
+    }
+
+    ParaText::Encoding get_out_encoding() const {
+      return out_encoding_;
     }
 
     size_t get_element_type_index(size_t column_index) const {
@@ -454,12 +544,12 @@ namespace ParaText {
       size_t num_threads = chunker_.num_chunks();
       column_chunks_.clear();
       for (size_t worker_id = 0; worker_id < num_threads; worker_id++) {
-        size_t start_of_chunk = 0, end_of_chunk = 0;
+        long long start_of_chunk = 0, end_of_chunk = 0;
         std::tie(start_of_chunk, end_of_chunk) = chunker_.get_chunk(worker_id);
         
         /* If the chunk was eliminated because its entirety represents quoted
            text, do not spawn a worker thread for it. */
-        if (start_of_chunk == end_of_chunk) {
+        if (start_of_chunk < 0 || end_of_chunk < 0) {
           continue;
         }
         column_chunks_.emplace_back();
@@ -474,9 +564,9 @@ namespace ParaText {
         }
 #ifdef PARALOAD_DEBUG
         std::cerr << "number of handlers: " << column_chunks_.back().size()
-                  << " " << start_of_chunk
-                  << " " << end_of_chunk
-                  << " " << (end_of_chunk - start_of_chunk) << std::endl;
+                  << " start: " << start_of_chunk
+                  << " end: " << end_of_chunk
+                  << " length: " << ((end_of_chunk - start_of_chunk) + 1) << std::endl;
 #endif
         workers.push_back(std::make_shared<ColBasedParseWorker<ColBasedChunk> >(column_chunks_.back()));
         threads.emplace_back(&ColBasedParseWorker<ColBasedChunk>::parse,
@@ -494,6 +584,20 @@ namespace ParaText {
           thread_exception = workers[i]->get_exception();
         }
       }
+#if 0
+      if (threads.size() == 0) {
+        column_chunks_.emplace_back();
+        for (size_t col = 0; col < column_infos_.size(); col++) {
+          auto fit = forced_semantics_.find(column_infos_[col].name);
+          if (fit == forced_semantics_.end()) {
+            column_chunks_.back().push_back(std::make_shared<ColBasedChunk>(column_infos_[col].name, params.max_level_name_length, params.max_levels, Semantics::UNKNOWN));
+          }
+          else {
+            column_chunks_.back().push_back(std::make_shared<ColBasedChunk>(column_infos_[col].name, params.max_level_name_length, params.max_levels, fit->second));
+          }
+        }
+      }
+#endif
       // We're now outside the parallel region.
       if (thread_exception) {
         std::rethrow_exception(thread_exception);
@@ -520,7 +624,7 @@ namespace ParaText {
       else {
         const size_t sz(cat_buffer_.size());
         for (size_t i = 0; i < sz; i++) {
-          *it = cat_buffer_[i];
+          *it = (T)cat_buffer_[column_index][i];
           it++;
         }
       }
@@ -530,7 +634,7 @@ namespace ParaText {
     typename std::enable_if<std::is_same<T, std::string>::value, void>::type copy_column_impl(size_t column_index, OutputIterator it) const {
       if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
         std::ostringstream ostr;
-        ostr << "string output iterator expected for column " << column_index;
+        ostr << "numeric output iterator expected for column " << column_index << ", not std::string element type.";
         throw std::logic_error(ostr.str());
       } else if (column_infos_[column_index].semantics == Semantics::TEXT) {
         //std::cout << "^^^" << column_index << std::endl;
@@ -554,7 +658,7 @@ namespace ParaText {
     typename std::enable_if<std::is_same<T, std::string>::value, void>::type copy_column_and_forget_impl(size_t column_index, OutputIterator it) const {
       if (column_infos_[column_index].semantics == Semantics::NUMERIC) {
         std::ostringstream ostr;
-        ostr << "string output iterator expected for column " << column_index;
+        ostr << "numeric output iterator expected for column " << column_index;
         throw std::logic_error(ostr.str());
       }
       else if (column_infos_[column_index].semantics == Semantics::TEXT) {
@@ -608,6 +712,8 @@ namespace ParaText {
     std::vector<int> any_text_;
     mutable std::vector<std::vector<size_t> > cat_buffer_;
     std::vector<std::type_index> common_type_index_;
+    Encoding in_encoding_;
+    Encoding out_encoding_;
   };
 
   std::type_index ColBasedPopulator::get_type_index() const {
@@ -631,6 +737,10 @@ namespace ParaText {
 
   size_t ColBasedPopulator::size() const {
     return loader_->size(column_index_);
+  }
+
+  std::type_index StringVectorPopulator::get_type_index() const {
+    return std::type_index(typeid(std::string));
   }
   }
 }

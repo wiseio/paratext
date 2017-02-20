@@ -56,13 +56,13 @@ public:
   }
 
   void parse_impl(const std::string &filename) {
-
     std::ifstream in;
-    in.open(filename.c_str());
+    in.open(filename.c_str(), std::ios::binary);
     const size_t block_size = 32768;
     char buf[block_size];
     in.seekg(chunk_start_, std::ios_base::beg);
     size_t current = chunk_start_;
+    size_t escape_count = 0;
     bool in_quote = false;
     while (current <= chunk_end_) {
       in.read(buf, std::min(chunk_end_ - current + 1, block_size));
@@ -74,8 +74,17 @@ public:
       while (i < nread && first_unquoted_newline_ < 0 && first_quoted_newline_ < 0) {
         if (in_quote) {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q1:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = false;
               i++;
               break;
@@ -89,8 +98,17 @@ public:
         }
         else {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q2:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = true;
               i++;
               break;
@@ -99,15 +117,24 @@ public:
               first_unquoted_newline_ = current + i;
               i++;
               break;
-            }            
+            }
           }
         }
       }
       while (i < nread && first_unquoted_newline_ < 0) {
         if (in_quote) {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q3:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = false;
               i++;
               break;
@@ -116,8 +143,17 @@ public:
         }
         else {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q4:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = true;
               i++;
               break;
@@ -133,8 +169,17 @@ public:
       while (i < nread && first_quoted_newline_ < 0) {
         if (in_quote) {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q5:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = false;
               i++;
               break;
@@ -148,8 +193,17 @@ public:
         }
         else {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q6:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = true;
               i++;
               break;
@@ -164,8 +218,17 @@ public:
       while (i < nread) {
         if (in_quote) {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q7:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = false;
               i++;
               break;
@@ -174,8 +237,17 @@ public:
         }
         else {
           for (; i < nread; i++) {
-            if (buf[i] == '\"') {
+            if (escape_count > 0) {
+              escape_count--;
+            }
+            else if (buf[i] == '\\') {
+              escape_count = 1;
+            }
+            else if (buf[i] == '\"') {
               num_quotes_++;
+#ifdef PARATEXT_DEBUG_QUOTE
+              std::cerr << "[Q8:" << (current + i) << ":" << num_quotes_ << ":" << escape_count;
+#endif
               in_quote = true;
               i++;
               break;
@@ -199,11 +271,11 @@ public:
     return num_quotes_;
   }
   
-  long get_first_quoted_newline() const {
+  long long get_first_quoted_newline() const {
     return first_quoted_newline_;
   }
 
-  long get_first_unquoted_newline() const {
+  long long get_first_unquoted_newline() const {
     return first_unquoted_newline_;
   }
 
@@ -215,12 +287,23 @@ public:
     first_quoted_newline_ = 0;
   }
 
+  void combine_adjacent(const QuoteNewlineAdjustmentWorker &other) {
+    chunk_end_ = other.chunk_end_;
+    num_quotes_ += other.num_quotes_;
+    if (first_unquoted_newline_ < 0) {
+      first_unquoted_newline_ = other.first_unquoted_newline_;
+    }
+    if (first_quoted_newline_ < 0) {
+      first_quoted_newline_ = other.first_quoted_newline_;
+    }
+  }
+
 private:
   size_t chunk_start_;
   size_t chunk_end_;
   size_t num_quotes_;
-  long first_unquoted_newline_;
-  long first_quoted_newline_;
+  long long first_unquoted_newline_;
+  long long first_quoted_newline_;
   std::exception_ptr thread_exception_;
 };
 }
