@@ -256,7 +256,7 @@ ParaText supports backslash escape characters:
 Writing CSV
 -----------
 
-ParaText does yet support parallel CSV writing. However, it bundles a CSV
+ParaText does not yet support parallel CSV writing. However, it bundles a CSV
 writer that can be used to write DataFrames with arbitrary string and byte
 buffer data in a lossless fashion.
 
@@ -306,7 +306,7 @@ ParaText is a work-in-progress. There are a few unimplemented features
 that may prevent it from working on all CSV files. We note them below.
 
 1. There is no way to supply type hints (e.g. `uint64` or `float`) of a
-column.  Only the interpretation of a column (numeric, categorical, or
+column. Only the interpretation of a column (numeric, categorical, or
 text) can be forced.
 
 2. DateTime will be supported in a future release.
