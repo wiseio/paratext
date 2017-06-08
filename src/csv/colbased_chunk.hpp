@@ -231,7 +231,7 @@ namespace CSV {
     void convert_to_cat_or_text() {
       if (number_data_.size() > 0) {
         for (size_t i = 0; i < number_data_.size(); i++) {
-          add_cat_data(std::to_string(number_data_.get<float>(i)));
+          cat_data_.push_back((long long)get_string_id(std::to_string(number_data_.get<float>(i))));
         }
         number_data_.clear();
         number_data_.shrink_to_fit();
