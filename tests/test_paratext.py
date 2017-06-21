@@ -182,3 +182,24 @@ A.1,3ABC
             logging.debug("filename: %s" % fn)
             actual = paratext.load_csv_to_pandas(fn)
             assert_dictframe_almost_equal(actual, expected)
+
+class TestSimpleFiles:
+
+    def do_simple_file_suite(self, dataset_metadata, frame_encoding, num_threads, expected_df):
+        filename = dataset_metadata["filename"]
+        actual_df = paratext.load_csv_to_pandas(filename, allow_quoted_newlines=True, out_encoding=frame_encoding, num_threads=num_threads)
+        assert_dictframe_almost_equal(actual_df, expected_df)
+
+    def test_batch(self):
+        datasets = [{"filename": "tests/hepatitis.csv"}, {"filename": "tests/breast-w.csv"}]
+        for dataset_metadata in datasets:
+            expected_df = pandas.read_csv(dataset_metadata["filename"], na_values=["?"])
+            cast_keys = {}
+            for key in expected_df.keys():
+                if expected_df[key].values.dtype == np.float64:
+                    #expected_df[key] = expected_df[key].astype(np.float32)
+                    cast_keys[key] = np.float32
+            expected_df = expected_df.astype(cast_keys)
+            for num_threads in [1,2,3,5,10]:
+                for frame_encoding in ["utf-8", "unknown"]:
+                    yield self.do_simple_file_suite, dataset_metadata, frame_encoding, num_threads, expected_df

@@ -197,7 +197,7 @@ public:
       current += nread;
     }
     epos_line = end + 1;
-    //std::cout << "start line: " << spos_line << " end line: " << epos_line << std::endl;
+    //std::cout << "start line: " << spos_linen << " end line: " << epos_line << std::endl;
     /*
       If we're in the last column position, process the token as some files
       do not end with a newline.
@@ -318,7 +318,7 @@ public:
             exp_possible = i == token_.size();
           }
         }
-      }
+        //}
       if (integer_possible) {
         handlers_[column_index_]->process_integer(fast_atoi<long long>(token_.begin(), token_.end()));
       }
@@ -332,7 +332,7 @@ public:
         }
         handlers_[column_index_]->process_categorical(token_aux_.begin(), token_aux_.end());
         token_aux_.clear();
-      }
+      }}
     }
     column_index_++;
     token_.clear();
