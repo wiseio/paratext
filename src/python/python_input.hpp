@@ -132,7 +132,7 @@ namespace ParaText {
   }
   
   template <class T>
-  typename std::enable_if<std::is_arithmetic<T>::value, float>::type
+  typename std::enable_if<std::is_arithmetic<T>::value, long>::type
   get_as_long(const T &t, size_t item_size) {
     (void)item_size;
     return (long long)t;
@@ -140,7 +140,7 @@ namespace ParaText {
   
   
   template <class T>
-  typename std::enable_if<std::is_arithmetic<T>::value, float>::type
+  typename std::enable_if<std::is_arithmetic<T>::value, bool>::type
   get_as_bool(const T &t, size_t item_size) {
     (void)item_size;
     return (bool)t;
