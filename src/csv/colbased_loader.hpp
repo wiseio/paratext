@@ -220,14 +220,41 @@ namespace ParaText {
       for (size_t i = 0; i < column_infos_.size(); i++) {
         column_infos_[i].name = header_parser_.get_column_name(i);
       }
+
+      size_t desired_num_chunks = params.num_threads;
+      in_progress_chunk_index_ = 0;
+      if (params.chunked_file_reading) {
+        if (params.file_chunk_size == 0) {
+          throw std::runtime_error("Cannot have a file chunk size of 0");
+        }
+        in_progress_filename_ = std::string(filename);
+        in_progress_params_ = ParseParams(params);
+        size_t num_file_chunks = std::max((size_t)1, length_ / params.file_chunk_size);
+        desired_num_chunks = params.num_threads * num_file_chunks;
+      }
+
       if (header_parser_.has_header()) {
-        chunker_.process(filename, header_parser_.get_end_of_header()+1, params.num_threads, params.allow_quoted_newlines);
+        chunker_.process(filename, header_parser_.get_end_of_header()+1, desired_num_chunks, params.allow_quoted_newlines);
       }
       else {
-        chunker_.process(filename, 0, params.num_threads, params.allow_quoted_newlines);
+        chunker_.process(filename, 0, desired_num_chunks, params.allow_quoted_newlines);
       }
+
       spawn_parse_workers(filename, params);
       update_meta_data();
+    }
+
+    /*
+      If doing chunked file reading, load the next part of the CSV file.
+      Returns true if there is more to read after the current chunk.
+    */
+    bool load_next() {
+      if (in_progress_params_.chunked_file_reading) {
+        spawn_parse_workers(in_progress_filename_, in_progress_params_);
+        return in_progress_chunk_index_ < chunker_.num_chunks();
+      } else {
+        return false;
+      }
     }
 
     /*
@@ -541,11 +568,12 @@ namespace ParaText {
       std::vector<std::shared_ptr<ColBasedParseWorker<ColBasedChunk> > > workers;
       //std::cerr << "number of threads: " << num_threads_ << std::endl;
       std::exception_ptr thread_exception;
-      size_t num_threads = chunker_.num_chunks();
+      size_t num_threads = std::min(
+          params.num_threads, chunker_.num_chunks() - in_progress_chunk_index_);
       column_chunks_.clear();
       for (size_t worker_id = 0; worker_id < num_threads; worker_id++) {
         long long start_of_chunk = 0, end_of_chunk = 0;
-        std::tie(start_of_chunk, end_of_chunk) = chunker_.get_chunk(worker_id);
+        std::tie(start_of_chunk, end_of_chunk) = chunker_.get_chunk(in_progress_chunk_index_++);
         
         /* If the chunk was eliminated because its entirety represents quoted
            text, do not spawn a worker thread for it. */
@@ -714,6 +742,9 @@ namespace ParaText {
     std::vector<std::type_index> common_type_index_;
     Encoding in_encoding_;
     Encoding out_encoding_;
+    std::string in_progress_filename_;
+    ParseParams in_progress_params_;
+    size_t in_progress_chunk_index_;
   };
 
   std::type_index ColBasedPopulator::get_type_index() const {
