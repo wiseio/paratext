@@ -48,7 +48,7 @@ namespace ParaText {
   };
 
   struct ParseParams {
-    ParseParams() : no_header(false), number_only(false), convert_null_to_space(true), block_size(32768), num_threads(16), allow_quoted_newlines(false),  max_level_name_length(std::numeric_limits<size_t>::max()), max_levels(std::numeric_limits<size_t>::max()), compression(Compression::NONE), parser_type(ParserType::COL_BASED) {}
+    ParseParams() : no_header(false), number_only(false), convert_null_to_space(true), block_size(32768), num_threads(16), allow_quoted_newlines(false),  max_level_name_length(std::numeric_limits<size_t>::max()), max_levels(std::numeric_limits<size_t>::max()), compression(Compression::NONE), parser_type(ParserType::COL_BASED), chunked_file_reading(false), file_chunk_size(0) {}
     bool no_header;
     bool number_only;
     bool compute_sum;
@@ -60,7 +60,8 @@ namespace ParaText {
     size_t max_levels;
     Compression compression;
     ParserType parser_type;
+    bool chunked_file_reading;
+    size_t file_chunk_size;
   };
-
 }
 #endif
