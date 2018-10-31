@@ -1,0 +1,38 @@
+#include<stdio.h>
+
+
+int contador (int x, int y){
+	
+	if (x<=y){
+		
+		return contador (x+1, y);
+		printf("%d os valores ",x);
+		
+		
+		
+	}
+	
+	
+	
+}
+
+
+
+int main (){
+	
+	int f,c, resultado;
+	printf("digite o começo");
+	scanf("%d",&c);
+	
+	printf("digite o final");
+	scanf("%d", &f);
+	
+	
+	contador(c,f);
+	resultado = contador (c,f);
+	
+	//printf("%d", resultado);
+	
+	
+	
+}
