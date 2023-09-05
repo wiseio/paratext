@@ -117,7 +117,7 @@ def _get_params(num_threads=0, allow_quoted_newlines=False, block_size=32768, nu
     return params
 
 def _make_posix_filename(fn_or_uri):
-     if ntpath.splitdrive(fn_or_uri)[0] or ntpath.splitunc(fn_or_uri)[0]:
+     if ntpath.splitdrive(fn_or_uri)[0]: # or ntpath.splitunc(fn_or_uri)[0]: # deprecated
          result = fn_or_uri
      else:
          parse_result = urlparse(fn_or_uri)
@@ -396,11 +396,11 @@ def load_csv_to_pandas(filename, *args, **kwargs):
     if os.path.getsize(filename) < 2 ** 10:  # cover the case of empty files have 0-element generators
          expanded = list(expanded)
          if len(expanded) > 0:
-              return pandas.DataFrame.from_items(expanded)
+              return pandas.DataFrame.from_dict(expanded) # deprecated: from pandas.DataFrame.from_items
          else:
               return pandas.DataFrame()
     else:
-         return pandas.DataFrame.from_items(expanded)
+         return pandas.DataFrame.from_dict(expanded) # deprecated: pandas.DataFrame.from_items
 
 @_docstring_parameter(_csv_load_params_doc)
 def baseline_average_columns(filename, type_check=False, *args, **kwargs):
